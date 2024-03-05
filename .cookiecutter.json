@@ -1,0 +1,26 @@
+{
+    "cookiecutter": {
+        "codeowner_github_usernames": "JonathanNathanson",
+        "full_name": "Layer8 Technologies Ltd",
+        "email": "contact@layer8.io",
+        "github_org": "LayerEightTechnologies",
+        "app_name": "layer8_app",
+        "verbose_name": "Layer8 App",
+        "app_slug": "layer8-app",
+        "project_slug": "nautobot-app-layer8-app",
+        "repo_url": "https://github.com/LayerEightTechnologies/nautobot-app-layer8-app",
+        "base_url": "layer8-app",
+        "min_nautobot_version": "2.0.0",
+        "max_nautobot_version": "2.9999",
+        "camel_name": "Layer8App",
+        "project_short_description": "Layer8 App",
+        "model_class_name": "None",
+        "open_source_license": "Not open source",
+        "docs_base_url": "https://docs.nautobot.com",
+        "docs_app_url": "https://docs.nautobot.com/projects/layer8-app/en/latest",
+        "_template": "https://github.com/nautobot/cookiecutter-nautobot-app",
+        "_output_dir": "/Users/jono/dev/Nautobot-Dev/outputs",
+        "_repo_dir": "/Users/jono/.cookiecutters/cookiecutter-nautobot-app/nautobot-app",
+        "_checkout": null
+    }
+}
