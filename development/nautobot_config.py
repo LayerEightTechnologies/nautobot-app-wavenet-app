@@ -127,7 +127,7 @@ if not _TESTING:
 #
 
 # Enable installed Apps. Add the name of each App to the list.
-PLUGINS = ["layer8_app","nautobot_ssot","nautobot_secrets_providers"]
+PLUGINS = ["layer8_app", "nautobot_ssot", "nautobot_secrets_providers"]
 
 # Apps configuration settings. These settings are used by various Apps that the user may have installed.
 # Each key in the dictionary is the name of an installed App and its value is a dictionary of settings.
@@ -137,3 +137,4 @@ PLUGINS = ["layer8_app","nautobot_ssot","nautobot_secrets_providers"]
 #         'buzz': 'bazz'
 #     }
 # }
+PLUGINS_CONFIG = {"nautobot_ssot": {"hide_example_jobs": False}}

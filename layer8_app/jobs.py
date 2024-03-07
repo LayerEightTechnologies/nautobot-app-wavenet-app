@@ -1,9 +1,12 @@
 """Test jobs for the Layer 8 app."""
 
 from nautobot.apps.jobs import ChoiceVar, Job, register_jobs
-from nautobot.extras.models import Secret
 
 from .helpers.tenant_api import fetch_buildings_list, get_building_data
+
+from .ssot_jobs.sync_tenant_api import BuildingDataSource
+
+name = "Layer8 App Jobs"
 
 
 class LoadBuildings(Job):
@@ -23,5 +26,5 @@ class LoadBuildings(Job):
         self.logger.info(f"Building Data: {building_data}")
 
 
-jobs = [LoadBuildings]
+jobs = [LoadBuildings, BuildingDataSource]
 register_jobs(*jobs)

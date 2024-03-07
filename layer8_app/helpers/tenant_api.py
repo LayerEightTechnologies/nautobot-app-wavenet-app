@@ -6,25 +6,50 @@ from requests.exceptions import RequestException
 
 from .get_m2m_token import get_api_token
 
+import openapi_client
+from openapi_client.rest import ApiException
 
-def fetch_buildings_list(get_api_token=get_api_token):
+configuration = openapi_client.Configuration(host="https://bcs-api.wavenetuk.com/v2.5.6")
+
+
+def fetch_buildings_list(get_api_token=get_api_token, configuration=configuration):
     """Fetch list of buildings from the Tenant API."""
     api_token = get_api_token()
-    headers = {"Authorization": f"Bearer {api_token}"}
-    response = requests.get(
-        "https://bcs-api.wavenetuk.com/v2.5.6/buildings/withoperator?page_size=1000&order_by=building_name ASC&fields=id, building_name, building_operator&status=Live Building",
-        headers=headers,
-        timeout=60,
-    )
-    if response.status_code == 200:
-        data = response.json()
-        dropdown_values = [
-            (item["id"], item["building_name"] + " (" + str(item["operator"]["operator_name"]) + ")")
-            for item in data["buildings"]["items"]
-        ]
-        return dropdown_values
-    else:
-        return []
+    with openapi_client.ApiClient(
+        configuration, header_name="Authorization", header_value=f"Bearer {api_token}"
+    ) as api_client:
+        api_instance = openapi_client.DefaultApi(api_client)
+
+        try:
+            api_response = api_instance.get_buildings_with_operator(
+                page_size=1000,
+                order_by="building_name ASC",
+                # fields="id, building_name, building_operator",
+                status="Live Building",
+            )
+            dropdown_values = [
+                (item["id"], item["building_name"] + " (" + str(item["operator"]["operator_name"]) + ")")
+                for item in api_response["buildings"]["items"]
+            ]
+            return dropdown_values
+        except ApiException as e:
+            return []
+
+    # headers = {"Authorization": f"Bearer {api_token}"}
+    # response = requests.get(
+    #     "https://bcs-api.wavenetuk.com/v2.5.6/buildings/withoperator?page_size=1000&order_by=building_name ASC&fields=id, building_name, building_operator&status=Live Building",
+    #     headers=headers,
+    #     timeout=60,
+    # )
+    # if response.status_code == 200:
+    #     data = response.json()
+    #     dropdown_values = [
+    #         (item["id"], item["building_name"] + " (" + str(item["operator"]["operator_name"]) + ")")
+    #         for item in data["buildings"]["items"]
+    #     ]
+    #     return dropdown_values
+    # else:
+    # return []
 
 
 def get_building_data(building_id):

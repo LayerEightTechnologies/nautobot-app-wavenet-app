@@ -31,6 +31,7 @@ python = ">=3.8,<3.12"
 nautobot = "^2.0.0"
 nautobot-ssot = "^2.3.0"
 nautobot-secrets-providers = {git = "https://github.com/LayerEightTechnologies/nautobot-app-secrets-providers.git", rev = "implement-azure-key-vault-provider", extras = ["azure"]}
+openapi-client = {git = "https://github.com/LayerEightTechnologies/Layer8-Core-PyClient-PydanticV1.git"}
 
 [tool.poetry.group.dev.dependencies]
 bandit = "*"
