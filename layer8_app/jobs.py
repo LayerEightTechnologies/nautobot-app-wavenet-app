@@ -6,6 +6,8 @@ from .helpers.tenant_api import fetch_buildings_list, get_building_data
 
 from .ssot_jobs.sync_tenant_api import BuildingDataSource
 
+from .ssot_jobs.jobs import Layer8DataSource
+
 name = "Layer8 App Jobs"
 
 
@@ -26,5 +28,5 @@ class LoadBuildings(Job):
         self.logger.info(f"Building Data: {building_data}")
 
 
-jobs = [LoadBuildings, BuildingDataSource]
+jobs = [LoadBuildings, BuildingDataSource, Layer8DataSource]
 register_jobs(*jobs)
