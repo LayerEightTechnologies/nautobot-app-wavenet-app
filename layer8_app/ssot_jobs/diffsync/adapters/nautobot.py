@@ -14,10 +14,12 @@ class NautobotAdapter(DiffSync):
     """Nautobot adapter for DiffSync."""
 
     building = dcim.NautobotBuilding
+    room = dcim.NautobotRoom
 
     top_level = ("building",)
 
     building_map = {}
+    room_map = {}
 
     def __init__(self, *args, job, sync=None, **kwargs):
         """Initialize the Nautobot DiffSync adapter."""
@@ -42,7 +44,7 @@ class NautobotAdapter(DiffSync):
                     name=building.name,
                     uuid=building.id,
                     status__name=building.status.name,
-                    external_id=int(building.id),
+                    external_id=int(building.custom_field_data.get("external_id")),
                 )
                 if self.job.debug:
                     self.job.logger.info(
@@ -53,6 +55,35 @@ class NautobotAdapter(DiffSync):
                 self.job.logger.warning(f"Failed to load {building.name}: {err}")
                 continue
 
+    def load_rooms(self):
+        """Add Nautobot Location objects as DiffSync Room models."""
+        for room in Location.objects.filter(location_type=LocationType.objects.get_or_create(name="Room")[0]):
+            if room.parent.name not in self.room_map:
+                self.room_map[room.parent.name] = {}
+            if room.name not in self.room_map[room.parent.name]:
+                self.room_map[room.parent.name][room.name] = {}
+            self.room_map[room.parent.name][room.name] = room.id
+            if room.parent is not None:
+                building_id = self.building_map.get(room.parent.name)
+                if building_id is not None:
+                    try:
+                        room = dcim.NautobotRoom(
+                            name=room.name,
+                            uuid=room.id,
+                            status__name=room.status.name,
+                            external_id=int(room.custom_field_data.get("external_id")),
+                            parent__name=room.parent.name,
+                        )
+                        if self.job.debug:
+                            self.job.logger.info(
+                                f"Loaded Room from Nautobot with data: {room.name} - {room.status__name} - {room.external_id} - {room.parent__name}"
+                            )
+                        self.add(room)
+                    except AttributeError as err:
+                        self.job.logger.warning(f"Failed to load {room.name}: {err}")
+                        continue
+
     def load(self):
         """Load data from Nautobot."""
         self.load_buildings()
+        self.load_rooms()

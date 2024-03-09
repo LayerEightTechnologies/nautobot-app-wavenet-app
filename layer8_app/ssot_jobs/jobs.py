@@ -47,6 +47,12 @@ class Layer8DataSource(DataSource):
                 "Locations",
                 reverse("dcim:location_list"),
             ),
+            DataMapping(
+                "Rooms",
+                "https://bcs-api.wavenetuk.com/v2.5.6/rooms",
+                "Locations",
+                reverse("dcim:location_list"),
+            ),
         )
 
     def load_source_adapter(self):
