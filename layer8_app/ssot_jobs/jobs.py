@@ -36,6 +36,7 @@ class Layer8DataSource(DataSource):
         name = "Layer8 Data Source"
         data_source = "Layer8"
         description = "Data source for Layer8 integration with SSoT App."
+        has_sensitive_variables = False
 
     @classmethod
     def data_mappings(cls):

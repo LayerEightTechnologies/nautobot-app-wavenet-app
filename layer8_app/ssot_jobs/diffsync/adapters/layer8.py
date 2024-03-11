@@ -25,11 +25,22 @@ class Layer8Adapter(DiffSync):
         response = self.layer8.get_buildings(page_size=1000, status="Live Building")
         for record in response["buildings"]["items"]:
             self.job.logger.info(f"Loading Building: {record['building_name']}")
+            _longitude = None
+            _latitude = None
+            if record["coordinate"] and record["coordinate"]["coordinates"] and record["coordinate"]["coordinates"][1]:
+                _longitude = float("{:.6f}".format(record["coordinate"]["coordinates"][1]))
+                _latitude = float("{:.6f}".format(record["coordinate"]["coordinates"][0]))
+            _status = "Planned"
+            if record["status"] == "Old Building":
+                _status = "Retired"
             building = self.building(
                 name=record["building_name"],
-                status__name="Planned",
+                status__name=_status,  # note, we always set the status for a new building to "Planned"
                 external_id=record["id"],
                 uuid=None,
+                longitude=_longitude,
+                latitude=_latitude,
+                technical_reference=(record["wifi_id"] or None),
             )
             try:
                 self.add(building)
@@ -50,9 +61,12 @@ class Layer8Adapter(DiffSync):
                     self.job.logger.info(
                         f"Loading Room from Layer8: {record['room_number']} ({record['building']['building_name']})"
                     )
+                _status = "Planned"
+                if record["is_active"] == False:
+                    _status = "Retired"
                 room = self.room(
                     name=record["room_number"],
-                    status__name="Planned",
+                    status__name=_status,
                     external_id=record["id"],
                     parent__name=record["building"]["building_name"],
                     uuid=None,

@@ -13,14 +13,17 @@ class Building(DiffSyncModel):
 
     _modelname = "building"
     _identifiers = ("name",)
-    _attributes = ("status__name", "external_id")
+    _attributes = ("status__name", "external_id", "longitude", "latitude", "technical_reference")
     _children = {"room": "rooms"}
 
     name: str
     status__name: str
     uuid: Optional[UUID]
     rooms: List["Room"] = list()
-    external_id: Annotated[int, CustomFieldAnnotation(key="external_id")]
+    external_id: int
+    longitude: Optional[float]
+    latitude: Optional[float]
+    technical_reference: Optional[str]
 
 
 class Room(DiffSyncModel):
@@ -34,7 +37,7 @@ class Room(DiffSyncModel):
     parent__name: Optional[str]  # Building name
     status__name: str
     uuid: Optional[UUID]
-    external_id: Annotated[int, CustomFieldAnnotation(key="external_id")]
+    external_id: int
 
 
 Building.update_forward_refs()

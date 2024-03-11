@@ -33,7 +33,20 @@ class NautobotBuilding(Building):
         _building = OrmLocation.objects.get(id=self.uuid)
         if self.diffsync.job.debug:
             self.diffsync.job.logger.info(f"Updating Building: {_building.name}")
-        # No fields to update yet so just save
+        """
+        Only update status if status__name is Old Building, indicating a retired 
+        building, otherwise leave as is
+        """
+        if attrs.get("status__name"):
+            _building.status = OrmStatus.objects.get(name=attrs["status__name"])
+        if attrs.get("longitude"):
+            _building.longitude = attrs["longitude"]
+        if attrs.get("latitude"):
+            _building.latitude = attrs["latitude"]
+        if attrs.get("technical_reference"):
+            _building.custom_field_data.update({"technical_reference": attrs["technical_reference"]})
+        if attrs.get("external_id"):
+            _building.custom_field_data.update({"external_id": attrs["external_id"]})
         _building.validated_save()
         return super().update(attrs)
 
@@ -81,12 +94,22 @@ class NautobotRoom(Room):
         _room = OrmLocation.objects.get(id=self.uuid)
         if self.diffsync.job.debug:
             self.diffsync.job.logger.info(f"Updating Room: {_room.name}")
-        # No fields to update yet so just save
+        # We wouldn't update any room fields, perhaps just the status if the room is marked as inactive?
+        if attrs.get("status__name"):
+            if attrs["status__name"] == "Retired":
+                _room.status = OrmStatus.objects.get(name="Retired")
         _room.validated_save()
         return super().update(attrs)
 
     def delete(self):
-        """Delete Room object in Nautobot."""
+        """
+        Delete Room object in Nautobot.
+
+        This would require a check to see if there are any dependent objects (e.g., devices)
+        If there are dependent objects, we would need to re-assign the dependent objects to another location,
+        such as the parent building. Perhaps we would need to modify the status of the device to indicate that
+        the device was in a deleted room.
+        """
         _room = OrmLocation.objects.get(id=self.uuid)
         if self.diffsync.job.debug:
             self.diffsync.job.logger.info(f"Deleting Room: {_room.name}")
