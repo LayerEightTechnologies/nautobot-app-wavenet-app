@@ -1720,6 +1720,27 @@ yaml = ["PyYAML (>=3.10)"]
 zookeeper = ["kazoo (>=2.8.0)"]
 
 [[package]]
+name = "layer8-auvik-api-client"
+version = "1.0.0"
+description = "Auvik API"
+optional = false
+python-versions = "^3.7"
+files = []
+develop = false
+
+[package.dependencies]
+aenum = ">=3.1.11"
+pydantic = "^1.10.5, <2"
+python-dateutil = ">=2.8.2"
+urllib3 = ">= 1.25.3"
+
+[package.source]
+type = "git"
+url = "https://github.com/LayerEightTechnologies/Layer8-Auvik-PyClient-PydanticV1.git"
+reference = "HEAD"
+resolved_reference = "e60f596b326711dda02d233599bf366ac51a1f0d"
+
+[[package]]
 name = "lazy-object-proxy"
 version = "1.10.0"
 description = "A fast and thorough lazy object proxy."
@@ -2293,7 +2314,7 @@ signedtoken = ["cryptography (>=3.0.0)", "pyjwt (>=2.0.0,<3)"]
 [[package]]
 name = "openapi-client"
 version = "1.0.0"
-description = "Wavenet Connected API"
+description = "Layer8 Core API"
 optional = false
 python-versions = "^3.7"
 files = []
@@ -2309,7 +2330,7 @@ urllib3 = ">= 1.25.3"
 type = "git"
 url = "https://github.com/LayerEightTechnologies/Layer8-Core-PyClient-PydanticV1.git"
 reference = "HEAD"
-resolved_reference = "9b284c86a1892a6593e3d9e96917dad83dd4ad65"
+resolved_reference = "8a7cc51f9bf8d34e347a159d1f1883a00c3e742c"
 
 [[package]]
 name = "packaging"
@@ -3938,4 +3959,4 @@ all = []
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "83861c7f95ae02edd1064275449d64f9d4337ccf46fdd8be796106bd81356ab0"
+content-hash = "ef7facdebbf8480b6386281f485db0c233f07026aee559e5c0ad0609df3ec275"
