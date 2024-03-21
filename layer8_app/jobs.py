@@ -7,7 +7,7 @@ from .helpers.auvik_api import get_auvik_tenants
 
 from .ssot_jobs.sync_tenant_api import BuildingDataSource
 
-from .ssot_jobs.jobs import Layer8DataSource
+from .ssot_jobs.jobs import AuvikDataSource, Layer8DataSource
 
 from .models import AuvikTenant
 
@@ -55,5 +55,5 @@ class LoadAuvikTenants(Job):
         self.logger.info("Auvik tenants loaded successfully.")
 
 
-jobs = [LoadAuvikTenants, LoadBuildings, BuildingDataSource, Layer8DataSource]
+jobs = [LoadAuvikTenants, LoadBuildings, BuildingDataSource, Layer8DataSource, AuvikDataSource]
 register_jobs(*jobs)

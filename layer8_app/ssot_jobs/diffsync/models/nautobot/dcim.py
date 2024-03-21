@@ -8,6 +8,7 @@ from nautobot.extras.models import Status as OrmStatus
 
 from ..base.dcim import Building
 from ..base.dcim import Room
+from ..base.dcim import Namespace
 
 
 class NautobotBuilding(Building):
@@ -115,3 +116,7 @@ class NautobotRoom(Room):
             self.diffsync.job.logger.info(f"Deleting Room: {_room.name}")
         _room.delete()
         return super().delete()
+
+
+class NautobotNamespace(Namespace):
+    """Nautobot Namespace model."""

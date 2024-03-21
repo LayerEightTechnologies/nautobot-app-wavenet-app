@@ -5,13 +5,15 @@ from collections import defaultdict
 from diffsync import DiffSync
 from diffsync.exceptions import ObjectAlreadyExists
 from nautobot.dcim.models import Location, LocationType
+from nautobot.ipam.models import Namespace
 from nautobot.extras.models import Status
 
 from ..models.nautobot import dcim
+from ....models import AuvikTenantBuildingRelationship
 
 
 class NautobotAdapter(DiffSync):
-    """Nautobot adapter for DiffSync."""
+    """Nautobot adapter for Layer8 DiffSync."""
 
     building = dcim.NautobotBuilding
     room = dcim.NautobotRoom
@@ -92,3 +94,53 @@ class NautobotAdapter(DiffSync):
         """Load data from Nautobot."""
         self.load_buildings()
         self.load_rooms()
+
+
+class NautobotAuvikAdapter(DiffSync):
+    """Nautobot adapter for Auvik diffsync."""
+
+    namespace = dcim.Namespace
+
+    top_level = ("namespace",)
+
+    def __init__(self, *args, job, sync=None, **kwargs):
+        """Initialize the Nautobot DiffSync adapter."""
+        super().__init__(*args, **kwargs)
+        self.job = job
+        self.sync = sync
+        self.objects_to_delete = defaultdict(list)
+
+    def sync_complete(self, source: DiffSync, *args, **kwargs):
+        """Clean up function for DiffSync sync.
+
+        Deletes objects from Nautobot that need to be deleted in a specific order.
+        """
+        return super().sync_complete(source, *args, **kwargs)
+
+    def load_namespaces(self):
+        """Load namespace for building."""
+        try:
+            building_name = Location.objects.get(
+                id=AuvikTenantBuildingRelationship.objects.get(auvik_tenant=self.job.building_to_sync).building.id
+            )
+        except Location.DoesNotExist:
+            self.job.logger.error(f"Building ID {self.building_id} does not exist in Nautobot.")
+            return
+
+        try:
+            _namespace = Namespace.objects.get(name=building_name)
+
+            namespace = self.namespace(
+                name=_namespace.name,
+                description=_namespace.description,
+            )
+            self.add(namespace)
+        except ObjectAlreadyExists as err:
+            self.job.logger.info(f"Namespace already exists: {err}")
+
+        except Namespace.DoesNotExist:
+            self.job.logger.info(f"Namespace does not exist in Nautobot. Not adding")
+
+    def load(self):
+        """Load data from Nautobot."""
+        self.load_namespaces()
