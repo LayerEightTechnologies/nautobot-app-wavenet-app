@@ -30,18 +30,6 @@ def tenant_api(get_api_token=get_api_token):
     return api_instance
 
 
-def auvik_api(get_credentials=get_auvik_credentials):
-    """Return the authenticated API client for the Auvik API."""
-    auvik_api_user, auvik_api_key = get_credentials()
-    configuration = layer8_auvik_api_client.Configuration(
-        host="https://auvikapi.eu1.my.auvik.com/v1",
-        username=auvik_api_user,
-        password=auvik_api_key,
-    )
-    api_client = layer8_auvik_api_client.ApiClient(configuration)
-    return api_client
-
-
 class Layer8DataSource(DataSource):
     """Class to provide a data source for Layer8 integration with SSoT App."""
 
@@ -155,10 +143,7 @@ class AuvikDataSource(DataSource):
         """Load data from Auvik into DiffSync models."""
         if self.debug:
             self.logger.info("Connecting to Auvik API...")
-        client = auvik_api()
-        self.source_adapter = AuvikAdapter(
-            job=self, sync=self.sync, api_client=client, building_id=self.building_to_sync
-        )
+        self.source_adapter = AuvikAdapter(job=self, sync=self.sync, building_id=self.building_to_sync)
         if self.debug:
             self.logger.info("Loading data from Auvik API.")
         self.source_adapter.load()

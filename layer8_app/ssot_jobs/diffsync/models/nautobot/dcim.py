@@ -1,14 +1,33 @@
 """DiffSyncModel DCIM subclasses for Nautobot data sync."""
 
 from django.core.exceptions import ValidationError
+from django.contrib.contenttypes.models import ContentType
 
 from nautobot.dcim.models import Location as OrmLocation
 from nautobot.dcim.models import LocationType as OrmLocationType
+from nautobot.ipam.models import Namespace as OrmNamespace
 from nautobot.extras.models import Status as OrmStatus
+from nautobot.ipam.models import VLANGroup as OrmVLANGroup
+from nautobot.ipam.models import VLAN as OrmVLAN
+from nautobot.ipam.models import Prefix as OrmPrefix
+from nautobot.dcim.models import Device as OrmDevice
+from nautobot.dcim.models import DeviceType as OrmDeviceType
+from nautobot.dcim.models import Manufacturer as OrmManufacturer
+from nautobot.extras.models import Role as OrmRole
+from nautobot.dcim.models import Interface as OrmInterface
+from nautobot.ipam.models import IPAddress as OrmIPAddress
+from nautobot.ipam.models import IPAddressToInterface
+
 
 from ..base.dcim import Building
 from ..base.dcim import Room
 from ..base.dcim import Namespace
+from ..base.dcim import VLANGroup
+from ..base.dcim import VLAN
+from ..base.dcim import Prefix
+from ..base.dcim import Device
+from ..base.dcim import Interface
+from ..base.dcim import IPAddress
 
 
 class NautobotBuilding(Building):
@@ -88,6 +107,7 @@ class NautobotRoom(Room):
             diffsync.job.logger.error(
                 f"Failed to create Room: {e} - {ids['name']} - {ids['parent__name']} - {ids['external_id']}"
             )
+            return None
         return super().create(ids=ids, diffsync=diffsync, attrs=attrs)
 
     def update(self, attrs):
@@ -120,3 +140,320 @@ class NautobotRoom(Room):
 
 class NautobotNamespace(Namespace):
     """Nautobot Namespace model."""
+
+    @classmethod
+    def create(cls, diffsync, ids, attrs):
+        """Create Namespace object in Nautobot."""
+        if diffsync.job.debug:
+            diffsync.job.logger.info(f"Creating Namespace: {ids['name']}")
+        try:
+            new_namespace = OrmNamespace(name=ids["name"], description=attrs.get("description"))
+            new_namespace.validated_save()
+        except ValidationError as e:
+            diffsync.job.logger.error(f"Failed to create Namespace: {e} - {ids['name']} - {attrs['description']}")
+            return None
+        # diffsync.namespace_map[ids["name"]] = new_namespace.id
+        return super().create(ids=ids, diffsync=diffsync, attrs=attrs)
+
+    def update(self, attrs):
+        """Update Namespace object in Nautobot."""
+        _namespace = OrmNamespace.objects.get(name=self.name)
+        if self.diffsync.job.debug:
+            self.diffsync.job.logger.info(f"Updating Namespace: {_namespace.name}")
+        if attrs.get("description"):
+            _namespace.description = attrs["description"]
+        _namespace.validated_save()
+        return super().update(attrs)
+
+    def delete(self):
+        """Delete Namespace object in Nautobot."""
+        # Disabled for now, as we probably a) don't want to delete namespaces and b) would have to
+        # delete them after all dependent objects are deleted.
+        #
+        # _namespace = OrmNamespace.objects.get(name=self.name)
+        # if self.diffsync.job.debug:
+        #     self.diffsync.job.logger.info(f"Deleting Namespace: {_namespace.name}")
+        # _namespace.delete()
+        # return super().delete()
+        pass
+
+
+class NautobotVLANGroup(VLANGroup):
+    """Nautobot VLANGroup model."""
+
+    @classmethod
+    def create(cls, diffsync, ids, attrs):
+        """Create VLANGroup object in Nautobot."""
+        if diffsync.job.debug:
+            diffsync.job.logger.info(f"Creating VLANGroup: {ids['name']}")
+        try:
+            new_vlangroup_location = OrmLocation.objects.get(name=attrs["location__name"])
+            new_vlangroup = OrmVLANGroup(name=ids["name"], location=new_vlangroup_location)
+            new_vlangroup.validated_save()
+        except ValidationError as e:
+            diffsync.job.logger.error(f"Failed to create VLANGroup: {e} - {ids['name']}")
+            return None
+        return super().create(ids=ids, diffsync=diffsync, attrs=attrs)
+
+    def update(self, attrs):
+        """Update VLANGroup object in Nautobot."""
+        _vlangroup = OrmVLANGroup.objects.get(name=self.name)
+        if self.diffsync.job.debug:
+            self.diffsync.job.logger.info(f"Updating VLANGroup: {_vlangroup.name}")
+            return None
+        return super().update(attrs)
+
+    def delete(self):
+        """Delete VLANGroup object in Nautobot."""
+        # Disabled for now, as we probably a) don't want to delete VLANGroups and b) would have to
+        # delete them after all dependent objects are deleted.
+        #
+        # _vlangroup = OrmVLANGroup.objects.get(name=self.name)
+        # if self.diffsync.job.debug:
+        #     self.diffsync.job.logger.info(f"Deleting VLANGroup: {_vlangroup.name}")
+        # _vlangroup.delete()
+        # return super().delete()
+        pass
+
+
+class NautobotVLAN(VLAN):
+    """Nautobot VLAN model."""
+
+    @classmethod
+    def create(cls, diffsync, ids, attrs):
+        """Create VLAN object in Nautobot."""
+        if diffsync.job.debug:
+            diffsync.job.logger.info(f"Creating VLAN: {ids['name']}")
+
+        try:
+            vlan_group = OrmVLANGroup.objects.get(name=ids["vlangroup"])
+            status = OrmStatus.objects.get(name="Active")
+            location = OrmLocation.objects.get(name=attrs["location__name"])
+            new_vlan = OrmVLAN(
+                name=ids["name"], vid=ids["vid"], vlan_group=vlan_group, status=status, location=location
+            )
+            new_vlan.validated_save()
+        except ValidationError as e:
+            diffsync.job.logger.error(f"Failed to create VLAN: {e} - {ids['name']}")
+            return None
+        return super().create(ids=ids, diffsync=diffsync, attrs=attrs)
+
+    def update(self, attrs):
+        """Update VLAN object in Nautobot."""
+        _vlan = OrmVLAN.objects.get(name=self.name)
+        if self.diffsync.job.debug:
+            self.diffsync.job.logger.info(f"Updating VLAN: {_vlan.name}")
+        return super().update(attrs)
+
+    def delete(self):
+        """Delete VLAN object in Nautobot."""
+        # Disabled for now, as we probably a) don't want to delete VLANs and b) would have to
+        # delete them after all dependent objects are deleted.
+        #
+        # _vlan = OrmVLAN.objects.get(name=self.name)
+        # if self.diffsync.job.debug:
+        #     self.diffsync.job.logger.info(f"Deleting VLAN: {_vlan.name}")
+        # _vlan.delete()
+        # return super().delete()
+        pass
+
+
+class NautobotPrefix(Prefix):
+    """Nautobot Prefix model."""
+
+    @classmethod
+    def create(cls, diffsync, ids, attrs):
+        """Create Prefix object in Nautobot."""
+        if diffsync.job.debug:
+            diffsync.job.logger.info(f"Creating Prefix: {ids['prefix']}")
+
+        try:
+            namespace = OrmNamespace.objects.get(name=ids["namespace"])
+            status = OrmStatus.objects.get(name="Active")
+            new_prefix = OrmPrefix(
+                prefix=ids["prefix"],
+                namespace=namespace,
+                type=attrs["type"],
+                status=status,
+                description=attrs["description"],
+            )
+            new_prefix.validated_save()
+        except ValidationError as e:
+            diffsync.job.logger.error(f"Failed to create Prefix: {e} - {ids['prefix']}")
+            return None
+        return super().create(ids=ids, diffsync=diffsync, attrs=attrs)
+
+    def update(self, attrs):
+        """Update Prefix object in Nautobot."""
+        _prefix = OrmPrefix.objects.get(prefix=self.prefix)
+        if self.diffsync.job.debug:
+            self.diffsync.job.logger.info(f"Updating Prefix: {_prefix.prefix}")
+        return super().update(attrs)
+
+    def delete(self):
+        """Delete Prefix object in Nautobot."""
+        # Disabled for now, as we probably a) don't want to delete Prefixes and b) would have to
+        # delete them after all dependent objects are deleted.
+        #
+        # _prefix = OrmPrefix.objects.get(prefix=self.prefix)
+        # if self.diffsync.job.debug:
+        #     self.diffsync.job.logger.info(f"Deleting Prefix: {_prefix.prefix}")
+        # _prefix.delete()
+        # return super().delete()
+        pass
+
+
+class NautobotDevice(Device):
+    """Nautobot Device model."""
+
+    @classmethod
+    def create(cls, diffsync, ids, attrs):
+        """Create Device object in Nautobot."""
+        if diffsync.job.debug:
+            diffsync.job.logger.info(f"Creating Device: {ids['name']}")
+        try:
+            location = OrmLocation.objects.get(name=ids["location__name"])
+            status = OrmStatus.objects.get(name="Active")
+            manufacturer = OrmManufacturer.objects.get(name=attrs["manufacturer"])
+            device_type = OrmDeviceType.objects.get(model=attrs["device_type"], manufacturer=manufacturer)
+            new_device = OrmDevice(
+                name=ids["name"],
+                device_type=device_type,
+                location=location,
+                status=status,
+            )
+            if attrs.get("serial") and attrs["serial"] is not None:
+                new_device.serial = attrs["serial"]
+            if attrs.get("monitoring_profile"):
+                new_device.custom_field_data.update({"monitoring_profile": attrs["monitoring_profile"]})
+            if attrs.get("role"):
+                role = OrmRole.objects.get_or_create(name=attrs["role"])[0]
+                role.content_types.add(ContentType.objects.get_for_model(OrmDevice))
+                new_device.role = role
+            new_device.validated_save()
+        except ValidationError as e:
+            diffsync.job.logger.error(f"Failed to create Device: {e} - {ids['name']}")
+            return None
+        return super().create(ids=ids, diffsync=diffsync, attrs=attrs)
+
+    def update(self, attrs):
+        """Update Device object in Nautobot."""
+        _device = OrmDevice.objects.get(name=self.name)
+        if self.diffsync.job.debug:
+            self.diffsync.job.logger.info(f"Updating Device: {_device.name}")
+        return super().update(attrs)
+
+    def delete(self):
+        """Delete Device object in Nautobot."""
+        # Disabled for now, as we probably a) don't want to delete Devices and b) would have to
+        # delete them after all dependent objects are deleted.
+        #
+        # _device = OrmDevice.objects.get(name=self.name)
+        # if self.diffsync.job.debug:
+        #     self.diffsync.job.logger.info(f"Deleting Device: {_device.name}")
+        # _device.delete()
+        # return super().delete()
+        pass
+
+
+class NautobotInterface(Interface):
+    """Nautobot Interface model."""
+
+    @classmethod
+    def create(cls, diffsync, ids, attrs):
+        """Create Interface object in Nautobot."""
+        if diffsync.job.debug:
+            diffsync.job.logger.info(f"Creating Interface: {ids['name']}")
+
+        try:
+            device = OrmDevice.objects.get(name=ids["device__name"], location__name=ids["device__location__name"])
+            status = OrmStatus.objects.get(name=attrs["status"])
+            new_interface = OrmInterface(
+                name=ids["name"],
+                device=device,
+                description=attrs["description"],
+                mgmt_only=attrs["mgmt_only"],
+                status=status,
+                type=attrs["type"],
+            )
+            new_interface.validated_save()
+        except ValidationError as e:
+            diffsync.job.logger.error(f"Failed to create Interface: {e} - {ids['name']}")
+            return None
+        return super().create(ids=ids, diffsync=diffsync, attrs=attrs)
+
+    def update(self, attrs):
+        """Update Interface object in Nautobot."""
+        _interface = OrmInterface.objects.get(name=self.name)
+        if self.diffsync.job.debug:
+            self.diffsync.job.logger.info(f"Updating Interface: {_interface.name}")
+        return super().update(attrs)
+
+    def delete(self):
+        """Delete Interface object in Nautobot."""
+        # Disabled for now, as we probably a) don't want to delete Interfaces and b) would have to
+        # delete them after all dependent objects are deleted.
+        #
+        # _interface = OrmInterface.objects.get(name=self.name)
+        # if self.diffsync.job.debug:
+        #     self.diffsync.job.logger.info(f"Deleting Interface: {_interface.name}")
+        # _interface.delete()
+        # return super().delete()
+        pass
+
+
+class NautobotIPAddress(IPAddress):
+    """Nautobot IPAddress model."""
+
+    @classmethod
+    def create(cls, diffsync, ids, attrs):
+        """Create IPAddress object in Nautobot."""
+        if diffsync.job.debug:
+            diffsync.job.logger.info(f"Creating IPAddress: {ids['address']}")
+
+        try:
+            namespace = OrmNamespace.objects.get(name=ids["namespace"])
+            status = OrmStatus.objects.get(name=attrs["status"])
+            new_ipaddress = OrmIPAddress(
+                address=ids["address"],
+                namespace=namespace,
+                status=status,
+            )
+            new_ipaddress.validated_save()
+
+        except ValidationError as e:
+            diffsync.job.logger.error(f"Failed to create IPAddress: {e} - {ids['address']}")
+            return None
+
+        try:
+            ip_interface = OrmInterface.objects.get(name=attrs["interface__name"], device__name=attrs["device"])
+            diffsync.job.logger.info(f"Assigning IP to interface: {ip_interface.name}")
+            assign_ip = IPAddressToInterface.objects.create(
+                ip_address=new_ipaddress, interface=ip_interface, vm_interface=None
+            )
+            assign_ip.validated_save()
+            assign_ip.interface.device.primary_ip4 = new_ipaddress
+            assign_ip.interface.device.validated_save()
+        except Exception as e:
+            diffsync.job.logger.error(f"Failed to assign IP to interface / set primary_ip4: {e}")
+
+        return super().create(ids=ids, diffsync=diffsync, attrs=attrs)
+
+    def update(self, attrs):
+        """Update IPAddress object in Nautobot."""
+        _ipaddress = OrmIPAddress.objects.get(address=self.address)
+        if self.diffsync.job.debug:
+            self.diffsync.job.logger.info(f"Updating IPAddress: {_ipaddress.address}")
+        return super().update(attrs)
+
+    def delete(self):
+        """Delete IPAddress object in Nautobot."""
+        # Disabled for now, as we probably a) don't want to delete IPAddresses and b) would have to
+        # delete them after all dependent objects are deleted.
+        #
+        # _ipaddress = OrmIPAddress.objects.get(address=self.address)
+        # if self.diffsync.job.debug:
+        #     self.diffsync.job.logger.info(f"Deleting IPAddress: {_ipaddress.address}")
+        # _ipaddress.delete()
+        # return super().delete()
+        pass

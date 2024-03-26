@@ -3,7 +3,7 @@
 from django.contrib import admin
 from nautobot.apps.admin import NautobotModelAdmin
 
-from .models import AuvikTenant, AuvikTenantBuildingRelationship
+from .models import AuvikTenant, AuvikTenantBuildingRelationship, AuvikDeviceModels, AuvikDeviceVendors
 
 
 @admin.register(AuvikTenant)
@@ -18,3 +18,17 @@ class AuvikTenantBuildingRelationshipsAdmin(NautobotModelAdmin):
     """Admin interface for AuvikTenantBuildingRelationships."""
 
     list_display = ("auvik_tenant", "building")
+
+
+@admin.register(AuvikDeviceModels)
+class AuvikDeviceModelsAdmin(NautobotModelAdmin):
+    """Admin interface for AuvikDeviceModels."""
+
+    list_display = ("auvik_model_name", "nautobot_device_type")
+
+
+@admin.register(AuvikDeviceVendors)
+class AuvikDeviceVendorsAdmin(NautobotModelAdmin):
+    """Admin interface for AuvikDeviceVendors."""
+
+    list_display = ("auvik_vendor_name", "nautobot_manufacturer")
