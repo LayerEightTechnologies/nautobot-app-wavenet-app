@@ -13,6 +13,7 @@ from nautobot.ipam.models import Prefix as OrmPrefix
 from nautobot.dcim.models import Device as OrmDevice
 from nautobot.dcim.models import DeviceType as OrmDeviceType
 from nautobot.dcim.models import Manufacturer as OrmManufacturer
+from nautobot.dcim.models import Cable as OrmCable
 from nautobot.extras.models import Role as OrmRole
 from nautobot.dcim.models import Interface as OrmInterface
 from nautobot.ipam.models import IPAddress as OrmIPAddress
@@ -28,6 +29,7 @@ from ..base.dcim import Prefix
 from ..base.dcim import Device
 from ..base.dcim import Interface
 from ..base.dcim import IPAddress
+from ..base.dcim import Cable
 
 
 class NautobotBuilding(Building):
@@ -455,5 +457,76 @@ class NautobotIPAddress(IPAddress):
         # if self.diffsync.job.debug:
         #     self.diffsync.job.logger.info(f"Deleting IPAddress: {_ipaddress.address}")
         # _ipaddress.delete()
+        # return super().delete()
+        pass
+
+
+class NautobotCable(Cable):
+    """Nautobot Cable model."""
+
+    @classmethod
+    def create(cls, diffsync, ids, attrs):
+        """Create Cable object in Nautobot."""
+        if diffsync.job.debug:
+            diffsync.job.logger.info(
+                f"Creating Cable: {ids['from_device']}:{ids['from_interface']} <-> {ids['to_device']}:{ids['to_interface']}"
+            )
+
+        try:
+            from_device = OrmDevice.objects.get(name=ids["from_device"])
+        except OrmDevice.DoesNotExist:
+            diffsync.job.logger.error(f"Failed to create Cable: Device {ids['from_device']} not found.")
+            return None
+        try:
+            from_interface = OrmInterface.objects.get(name=ids["from_interface"], device=from_device)
+        except OrmInterface.DoesNotExist:
+            diffsync.job.logger.error(
+                f"Failed to create Cable: Interface {ids['from_interface']} not found on Device {ids['from_device']}"
+            )
+            return None
+        try:
+            to_device = OrmDevice.objects.get(name=ids["to_device"])
+        except OrmDevice.DoesNotExist:
+            diffsync.job.logger.error(f"Failed to create Cable: Device {ids['to_device']} not found.")
+            return None
+        try:
+            to_interface = OrmInterface.objects.get(name=ids["to_interface"], device=to_device)
+        except OrmInterface.DoesNotExist:
+            diffsync.job.logger.error(
+                f"Failed to create Cable: Interface {ids['to_interface']} not found on Device {ids['to_device']}"
+            )
+            return None
+        try:
+            new_cable = OrmCable(
+                termination_a_type=ContentType.objects.get(app_label="dcim", model="interface"),
+                termination_a_id=from_interface.id,
+                termination_b_type=ContentType.objects.get(app_label="dcim", model="interface"),
+                termination_b_id=to_interface.id,
+                status=OrmStatus.objects.get(name="Connected"),
+            )
+            new_cable.validated_save()
+        except ValidationError as e:
+            diffsync.job.logger.error(
+                f"Failed to create Cable: {e} - {ids['from_device']}:{ids['from_interface']} <-> {ids['to_device']}:{ids['to_interface']}"
+            )
+            return None
+        return super().create(ids=ids, diffsync=diffsync, attrs=attrs)
+
+    def update(self, attrs):
+        """Update Cable object in Nautobot."""
+        _cable = OrmCable.objects.get(termination_a_id=self.termination_a_id, termination_b_id=self.termination_b_id)
+        if self.diffsync.job.debug:
+            self.diffsync.job.logger.info(f"Updating Cable: {_cable}")
+        return super().update(attrs)
+
+    def delete(self):
+        """Delete Cable object in Nautobot."""
+        # Disabled for now, as we probably a) don't want to delete Cables and b) would have to
+        # delete them after all dependent objects are deleted.
+        #
+        # _cable = OrmCable.objects.get(termination_a_id=self.termination_a_id, termination_b_id=self.termination_b_id)
+        # if self.diffsync.job.debug:
+        #     self.diffsync.job.logger.info(f"Deleting Cable: {_cable}")
+        # _cable.delete()
         # return super().delete()
         pass

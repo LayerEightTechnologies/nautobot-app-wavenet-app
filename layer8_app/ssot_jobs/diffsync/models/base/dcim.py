@@ -168,6 +168,21 @@ class IPAddress(DiffSyncModel):
     uuid: Optional[UUID]
 
 
+class Cable(DiffSyncModel):
+    """Base Cable model."""
+
+    _modelname = "cable"
+    _identifiers = ("from_device", "from_interface", "to_device", "to_interface")
+    _attributes = ()
+    _children = {}
+
+    from_device: str
+    from_interface: str
+    to_device: str
+    to_interface: str
+    uuid: Optional[UUID]
+
+
 Building.update_forward_refs()
 Room.update_forward_refs()
 Namespace.update_forward_refs()

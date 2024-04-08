@@ -4,7 +4,10 @@ from collections import defaultdict
 
 from diffsync import DiffSync
 from diffsync.exceptions import ObjectAlreadyExists
-from nautobot.dcim.models import Location, LocationType, Device
+
+from django.db.models import Q
+
+from nautobot.dcim.models import Location, LocationType, Device, Cable, Interface
 from nautobot.ipam.models import Namespace, VLANGroup, VLAN, Prefix
 from nautobot.extras.models import Status
 
@@ -106,11 +109,13 @@ class NautobotAuvikAdapter(DiffSync):
     device = dcim.NautobotDevice
     interface = dcim.NautobotInterface
     ipaddr = dcim.NautobotIPAddress
+    cable = dcim.NautobotCable
 
     top_level = (
         "namespace",
         "vlangroup",
         "device",
+        "cable",
     )
 
     def __init__(self, *args, job, sync=None, **kwargs):
@@ -282,20 +287,32 @@ class NautobotAuvikAdapter(DiffSync):
 
             # Load management IP address for device
             try:
-                _ipaddr = _interface.ip_addresses.get(interface=_interface, address__contains=".")
+                _ipaddr = _interface.ip_addresses.get()
                 if _ipaddr is not None:
+                    if self.job.debug:
+                        self.job.logger.info(f"IP Address: {_ipaddr.address} found in Nautobot for {device.name}.")
                     ipaddr = self.ipaddr(
-                        address=_ipaddr.address,
-                        namespace=_ipaddr.namespace.name,
+                        address=_ipaddr.host,
+                        namespace=_ipaddr.parent.namespace.name,
                         interface__name=_interface.name,
                         status=_ipaddr.status.name,
                         device=_device.name,
                     )
                     self.add(ipaddr)
                     interface.add_child(child=ipaddr)
-            except:
+            except AttributeError as err:
                 if self.job.debug:
-                    self.job.logger.info(f"Device {device.name} does not have a management IP address. Not loading.")
+                    self.job.logger.info(
+                        f"Device {device.name} does not have a management IP address. Not loading. Error: {err}"
+                    )
+            except ValueError as err:
+                if self.job.debug:
+                    self.job.logger.info(f"Value Error: {err}")
+            except Exception as err:
+                if self.job.debug:
+                    self.job.logger.info(
+                        f"Device {device.name} does not have a management IP address. Not loading. Interface details: {_interface.__dict__}. Exception: {err}"
+                    )
 
     # def load_interfaces(self):
     #     """
@@ -313,6 +330,38 @@ class NautobotAuvikAdapter(DiffSync):
     #     """
     #     pass
 
+    def load_cables(self):
+        """Load cables for devices from Nautobot."""
+        try:
+            cables = Cable.objects.filter(
+                Q(_termination_b_device_id__in=Device.objects.filter(location__name=self.building_name))
+                | Q(_termination_a_device_id__in=Device.objects.filter(location__name=self.building_name))
+            )
+        except Cable.DoesNotExist:
+            if self.job.debug:
+                self.job.logger.info(f"No cables found for {self.building_name} in Nautobot. Not loading.")
+            return
+
+        for _cable in cables:
+            try:
+                _termination_a_interface_name = Interface.objects.get(id=_cable.termination_a_id).name
+                _termination_b_interface_name = Interface.objects.get(id=_cable.termination_b_id).name
+                cable = self.cable(
+                    from_device=_cable._termination_a_device.name,
+                    from_interface=_termination_a_interface_name,
+                    to_device=_cable._termination_b_device.name,
+                    to_interface=_termination_b_interface_name,
+                )
+                self.add(cable)
+                if self.job.debug:
+                    self.job.logger.info(f"Added Nautobot Cable: ```{cable.__dict__}```")
+            except ObjectAlreadyExists as err:
+                if self.job.debug:
+                    self.job.logger.info(f"Cable already exists: {err}")
+            except Interface.DoesNotExist:
+                if self.job.debug:
+                    self.job.logger.info(f"Interface for cable does not exist in Nautobot. Not loading.")
+
     # TODO: Implement (parent) load_devices, (-> child) load_interfaces (mgmt if) and (-> child) load_ipaddrs (mgmt ip) methods
     # Load only one interface per device. The interface will be the management interface for the device.
     # The interface will be called "ManagementInterface" and will have the name "mgmt0"
@@ -326,3 +375,4 @@ class NautobotAuvikAdapter(DiffSync):
         self.load_vlans()
         self.load_prefixes()
         self.load_devices()
+        self.load_cables()
