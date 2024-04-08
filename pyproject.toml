@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "layer8-app"
+name = "Wavenet Connected App"
 version = "0.1.0"
-description = "Layer8 App"
+description = "Wavenet Connected app for Nautobot to integrate with Wavenet Tenant API and Auvik Monitoring API."
 authors = ["Layer8 Technologies Ltd <contact@layer8.io>"]
 readme = "README.md"
 homepage = "https://github.com/LayerEightTechnologies/nautobot-app-layer8-app"
