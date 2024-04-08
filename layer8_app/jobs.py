@@ -126,7 +126,7 @@ class LoadAuvikVendorsAndModels(Job):
 
 jobs = [
     LoadAuvikTenants,
-    LoadBuildings,
+    # LoadBuildings,
     # BuildingDataSource,
     Layer8DataSource,
     AuvikDataSource,
