@@ -3,6 +3,8 @@
 import layer8_auvik_api_client
 from layer8_auvik_api_client.rest import ApiException
 
+from ..models import AuvikTenant
+
 from django.core.exceptions import ObjectDoesNotExist
 
 from nautobot.extras.models import Secret
@@ -169,3 +171,10 @@ def auvik_api_interface(api_client):
     """Return an API instance for the Auvik Interface API."""
     api_instance = layer8_auvik_api_client.InterfaceApi(api_client)
     return api_instance
+
+
+def load_auvik_tenants_from_orm():
+    """Load Auvik tenants from the ORM."""
+    tenants_list = AuvikTenant.objects.all()
+    tenants_choices = [(tenant.auvik_tenant_id, tenant.name) for tenant in tenants_list]
+    return tenants_choices
