@@ -12,7 +12,7 @@ class Layer8AppConfig(NautobotAppConfig):
     """App configuration for the layer8_app app."""
 
     name = "layer8_app"
-    verbose_name = "Layer8 App"
+    verbose_name = "Layer8 Apps"
     version = __version__
     author = "Layer8 Technologies Ltd"
     description = "Layer8 App."
