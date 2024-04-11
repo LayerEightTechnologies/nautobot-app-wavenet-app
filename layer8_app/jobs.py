@@ -3,7 +3,13 @@
 from nautobot.apps.jobs import ChoiceVar, Job, register_jobs
 
 from .helpers.tenant_api import fetch_buildings_list, get_building_data
-from .helpers.auvik_api import get_auvik_tenants, auvik_api, auvik_api_device, fetch_all_pages
+from .helpers.auvik_api import (
+    get_auvik_tenants,
+    auvik_api,
+    auvik_api_device,
+    fetch_all_pages,
+    load_auvik_tenants_from_orm,
+)
 
 # from .ssot_jobs.sync_tenant_api import BuildingDataSource
 
@@ -64,11 +70,8 @@ class LoadAuvikVendorsAndModels(Job):
         name = "Load Auvik Device Vendors and Models"
         description = "Load Auvik device vendors and models from the Auvik API and create them as AuvikDeviceVendors and AuvikDeviceModels objects in Nautobot."
 
-    tenants_list = AuvikTenant.objects.all()
-    # tenants_choices = [(tenant.auvik_tenant_id, tenant.name) for tenant in tenants_list]
-    tenants_choices = [("1", "Test Tenant")]
     auvik_tenant_id = ChoiceVar(
-        description="Select an Auvik tenant to import", label="Auvik Tenant", choices=tenants_choices
+        description="Select an Auvik tenant to import", label="Auvik Tenant", choices=load_auvik_tenants_from_orm
     )
 
     def run(self, auvik_tenant_id=None):
