@@ -66,7 +66,7 @@ class LoadAuvikVendorsAndModels(Job):
 
     tenants_list = AuvikTenant.objects.all()
     # tenants_choices = [(tenant.auvik_tenant_id, tenant.name) for tenant in tenants_list]
-    tenant_choices = [("1", "Test Tenant")]
+    tenants_choices = [("1", "Test Tenant")]
     auvik_tenant_id = ChoiceVar(
         description="Select an Auvik tenant to import", label="Auvik Tenant", choices=tenants_choices
     )
