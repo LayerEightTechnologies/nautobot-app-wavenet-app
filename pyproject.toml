@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "layer8-app"
 version = "0.1.0"
-description = "Layer8 App"
+description = "Wavenet Connected app for Nautobot to integrate with Wavenet Tenant API and Auvik Monitoring API."
 authors = ["Layer8 Technologies Ltd <contact@layer8.io>"]
 readme = "README.md"
 homepage = "https://github.com/LayerEightTechnologies/nautobot-app-layer8-app"
@@ -31,8 +31,8 @@ python = ">=3.8,<3.12"
 nautobot = "^2.0.0"
 nautobot-ssot = "^2.3.0"
 nautobot-secrets-providers = {git = "https://github.com/LayerEightTechnologies/nautobot-app-secrets-providers.git", rev = "implement-azure-key-vault-provider", extras = ["azure"]}
-openapi-client = {git = "https://github.com/LayerEightTechnologies/Layer8-Core-PyClient-PydanticV1.git"}
-layer8-auvik-api-client = {git = "https://github.com/LayerEightTechnologies/Layer8-Auvik-PyClient-PydanticV1.git"}
+layer8-auvik-api-client = {git = "https://github.com/LayerEightTechnologies/Layer8-Auvik-PyClient-PydanticV1.git", rev = "main"}
+openapi-client = {git = "https://github.com/LayerEightTechnologies/Layer8-Core-PyClient-PydanticV1.git", rev = "main"}
 
 [tool.poetry.group.dev.dependencies]
 bandit = "*"
