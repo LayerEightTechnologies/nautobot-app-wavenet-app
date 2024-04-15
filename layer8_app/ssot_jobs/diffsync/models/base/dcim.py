@@ -132,7 +132,7 @@ class Interface(DiffSyncModel):
         "device__name",
         "device__location__name",
     )
-    _attributes = ("type", "description", "status", "mgmt_only")
+    _attributes = ("type", "description", "status", "mgmt_only", "monitoring_profile")
     _children = {"ipaddr": "ipaddrs"}
 
     name: str
@@ -140,10 +140,11 @@ class Interface(DiffSyncModel):
     device__location__name: str
     type: str
     status: str
-    description: Optional[str]
+    description: Optional[str] = None
+    monitoring_profile: Optional[dict]
     mac_address: Optional[str]
     ipaddrs: List["IPAddress"] = list()
-    mgmt_only: bool
+    mgmt_only: Optional[bool] = False
     # enabled: bool
 
     uuid: Optional[UUID]

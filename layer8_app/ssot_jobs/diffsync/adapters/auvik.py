@@ -47,6 +47,7 @@ class AuvikAdapter(DiffSync):
 
         # Global data structures for storing device and interface information
         self.device_data = {}
+        self.device_map = {}
         self.interface_data = {}
 
         try:
@@ -56,7 +57,12 @@ class AuvikAdapter(DiffSync):
                 "tenants": auvik_tenant_id,
                 "page_first": 100,
             }
-            self.device_data = fetch_all_pages(device_api_instance, "read_multiple_device_info", **params)
+            devices = fetch_all_pages(device_api_instance, "read_multiple_device_info", **params)
+            self.device_data = devices
+
+            for device in devices:
+                self.device_map[device.id] = device
+            # self.device_data = fetch_all_pages(device_api_instance, "read_multiple_device_info", **params)
         except Exception as err:
             self.job.logger.error(f"Error fetching devices from Auvik: {err}")
 
@@ -65,13 +71,25 @@ class AuvikAdapter(DiffSync):
             interface_api_instance = auvik_api_interface(self.auvik)
             for device in self.device_data:
                 device_id = device.id
-                params = {
+                params_ethernet = {
                     "filter_parent_device": device_id,
                     "filter_interface_type": "ethernet",
                     "page_first": 1000,
                 }
-                interfaces = fetch_all_pages(interface_api_instance, "read_multiple_interface_info", **params)
-                self.interface_data[device_id] = interfaces
+                interfaces_ethernet = fetch_all_pages(
+                    interface_api_instance, "read_multiple_interface_info", **params_ethernet
+                )
+
+                params_link_aggregation = {
+                    "filter_parent_device": device_id,
+                    "filter_interface_type": "linkAggregation",
+                    "page_first": 1000,
+                }
+                interfaces_link_aggregation = fetch_all_pages(
+                    interface_api_instance, "read_multiple_interface_info", **params_link_aggregation
+                )
+
+                self.interface_data[device_id] = interfaces_ethernet + interfaces_link_aggregation
         except Exception as err:
             self.job.logger.error(f"Error fetching interfaces from Auvik: {err}")
 
@@ -309,16 +327,62 @@ class AuvikAdapter(DiffSync):
                 self.job.logger.info(f"Added Auvik Device: ```{device.__dict__}```")
 
     # Implementation of (parent) load_devices, (-> child) load_interfaces and (-> child) load_ipaddrs methods
-    # Interfaces - let's actually not create all interfaces from Auvik, instead we'll create just a management interface
-    # if it does not exist already using get_or_create. That's what we'll assign the management IP to.
-    # ALL DONE as part of the load_devices method, as we only need to create the mgmt0 interface for each device and assign
-    # it's MGMT VRF IP address (10.xxx.10.xxx).
+    # We are going to load the interfaces for every device, and we're going to create interfaces that haven't already been created
+    # by the device type template.
 
-    # TODO: Load device interconnections from Auvik API
-    # This is likely to involve, for each device, calling the "Read Multiple Interfaces" endpoint and recording any interface
-    # that has values in connectedTo. We record the Name and ID of the device interface and the ifName and ID of the connectedTo interface.
-    # We'll likely need to create a dictionary of interfaces and their connectedTo interfaces and then go through that dictionary and
-    # create the connections.
+    def load_interfaces(self):
+        """Load interfaces for building from Auvik API."""
+        for device_id, interfaces in self.interface_data.items():
+            for interface in interfaces:
+                interface_name = interface.attributes.interface_name
+                if interface_name == "me0":
+                    continue
+
+                interface_type = interface.attributes.interface_type
+                if interface_type == "ethernet":
+                    interface_type = "1000base-t"
+                elif interface_type == "linkAggregation":
+                    interface_type = "virtual"
+
+                device_name = self.device_map[device_id].attributes.device_name
+                device = self.get(
+                    self.device, f"{device_name}__{self.building_name.name}"
+                )  # uid for the device is the device name and building name
+
+                monitoring_profile = {
+                    "monitoredBy": "auvik",
+                    "monitoringFields": {
+                        "interfaceId": interface.id,
+                    },
+                }
+
+                # Load interface for every device
+                interface = self.interface(
+                    name=interface_name,
+                    device__name=device_name,
+                    device__location__name=self.building_name.name,
+                    type=interface_type,
+                    monitoring_profile=monitoring_profile,
+                    status="Active",
+                )
+                self.add(interface)
+                device.add_child(interface)
+
+                if self.job.debug:
+                    self.job.logger.info(f"Added Auvik Interface: ```{interface.__dict__}```")
+
+                # # Load IP Address for every interface
+                # if interface.attributes.ip_addresses is not None:
+                #     for _ip in interface.attributes.ip_addresses:
+                #         ipaddr = self.ipaddr(
+                #             address=_ip,
+                #             namespace=self.building_name.name,
+                #             interface__name=interface_name,
+                #             status="Active",
+                #             device=device_name,
+                #         )
+                #         self.add(ipaddr)
+                #         interface.add_child(ipaddr)
 
     def load_cables(self):
         """Load cables for building from Auvik API."""
@@ -487,4 +551,5 @@ class AuvikAdapter(DiffSync):
         self.load_vlans()
         self.load_prefixes()
         self.load_devices()
+        self.load_interfaces()
         self.load_cables()
