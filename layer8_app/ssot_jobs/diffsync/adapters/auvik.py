@@ -45,6 +45,36 @@ class AuvikAdapter(DiffSync):
             self.building_name = None
             return
 
+        # Global data structures for storing device and interface information
+        self.device_data = {}
+        self.interface_data = {}
+
+        try:
+            device_api_instance = auvik_api_device(self.auvik)
+            auvik_tenant_id = AuvikTenant.objects.get(id=self.job.building_to_sync).auvik_tenant_id
+            params = {
+                "tenants": auvik_tenant_id,
+                "page_first": 100,
+            }
+            self.device_data = fetch_all_pages(device_api_instance, "read_multiple_device_info", **params)
+        except Exception as err:
+            self.job.logger.error(f"Error fetching devices from Auvik: {err}")
+
+        # self.interface_data must be populated for each device in self.device_data
+        try:
+            interface_api_instance = auvik_api_interface(self.auvik)
+            for device in self.device_data:
+                device_id = device.id
+                params = {
+                    "filter_parent_device": device_id,
+                    "filter_interface_type": "ethernet",
+                    "page_first": 1000,
+                }
+                interfaces = fetch_all_pages(interface_api_instance, "read_multiple_interface_info", **params)
+                self.interface_data[device_id] = interfaces
+        except Exception as err:
+            self.job.logger.error(f"Error fetching interfaces from Auvik: {err}")
+
     def load_namespaces(self):
         """Load namespace for building from Auvik."""
         self.job.logger.info(f"auvik_tenant_id: {self.job.building_to_sync}")
@@ -146,13 +176,7 @@ class AuvikAdapter(DiffSync):
 
     def load_devices(self):
         """Load devices for building from Auvik API."""
-        api_instance = auvik_api_device(self.auvik)
-        auvik_tenant_id = AuvikTenant.objects.get(id=self.job.building_to_sync).auvik_tenant_id
-        params = {
-            "tenants": auvik_tenant_id,
-            "page_first": 100,
-        }
-        auvik_devices = fetch_all_pages(api_instance, "read_multiple_device_info", **params)
+        auvik_devices = self.device_data
 
         # Create a dictionary of device names to device IDs for use in creating device interconnections
         device_names = {}
@@ -331,13 +355,14 @@ class AuvikAdapter(DiffSync):
         # Pull devices for building (based on tenant ID) from Auvik API
         processed_data = {}
 
-        api_instance_devices = auvik_api_device(self.auvik)
-        auvik_tenant_id = AuvikTenant.objects.get(id=self.job.building_to_sync).auvik_tenant_id
-        params = {
-            "tenants": auvik_tenant_id,
-            "page_first": 1000,
-        }
-        devices = fetch_all_pages(api_instance_devices, "read_multiple_device_info", **params)
+        # api_instance_devices = auvik_api_device(self.auvik)
+        # auvik_tenant_id = AuvikTenant.objects.get(id=self.job.building_to_sync).auvik_tenant_id
+        # params = {
+        #     "tenants": auvik_tenant_id,
+        #     "page_first": 1000,
+        # }
+        # devices = fetch_all_pages(api_instance_devices, "read_multiple_device_info", **params)
+        devices = self.device_data
 
         # For each device, pull interfaces and connected_to interfaces from Auvik API
         device_names = {}
@@ -346,14 +371,14 @@ class AuvikAdapter(DiffSync):
             device_name = device.attributes.device_name
             device_names[device_id] = device_name
 
-            api_instance_interfaces = auvik_api_interface(self.auvik)
-
-            params = {
-                "filter_parent_device": device_id,
-                "filter_interface_type": "ethernet",
-                "page_first": 1000,
-            }
-            interfaces = fetch_all_pages(api_instance_interfaces, "read_multiple_interface_info", **params)
+            # api_instance_interfaces = auvik_api_interface(self.auvik)
+            # params = {
+            #     "filter_parent_device": device_id,
+            #     "filter_interface_type": "ethernet",
+            #     "page_first": 1000,
+            # }
+            # interfaces = fetch_all_pages(api_instance_interfaces, "read_multiple_interface_info", **params)
+            interfaces = self.interface_data[device_id]
 
             for interface in interfaces:
                 if interface.relationships.connected_to.data:
