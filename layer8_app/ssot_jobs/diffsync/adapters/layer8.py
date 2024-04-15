@@ -35,6 +35,8 @@ class Layer8Adapter(DiffSync):
                 _status = "Retired"
             building = self.building(
                 name=record["building_name"],
+                # Potentially remove status from here, so it's not included in DiffSync. We always set the status for a new building to "Planned",
+                # and we don't want to update the status of existing buildings.
                 status__name=_status,  # note, we always set the status for a new building to "Planned"
                 external_id=record["id"],
                 uuid=None,
@@ -61,6 +63,10 @@ class Layer8Adapter(DiffSync):
                     self.job.logger.info(
                         f"Loading Room from Layer8: {record['room_number']} ({record['building']['building_name']})"
                     )
+                # Room Status should be set to "Planned" for new rooms, and "Retired" for rooms that are no longer active.
+                # For existing rooms, we don't want to update the status. How can we achieve this?
+                # Probably handled in the DiffSync model, where we only set the status to planned for new objects, otherwise we set it to
+                # the existing status or Retired based on the below.
                 _status = "Planned"
                 if record["is_active"] == False:
                     _status = "Retired"
