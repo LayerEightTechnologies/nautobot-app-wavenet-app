@@ -48,6 +48,8 @@ class NautobotAdapter(DiffSync):
                 building = self.building(
                     name=building.name,
                     uuid=building.id,
+                    # Potentially remove status from here, so it's not included in DiffSync. We always set the status for a new building to "Planned",
+                    # and we don't want to update the status of existing buildings.
                     status__name=building.status.name,
                     external_id=int(building.custom_field_data.get("external_id")),
                     longitude=building.longitude,
@@ -66,6 +68,7 @@ class NautobotAdapter(DiffSync):
     def load_rooms(self):
         """Add Nautobot Location objects as DiffSync Room models."""
         for _room in Location.objects.filter(location_type=LocationType.objects.get_or_create(name="Room")[0]):
+            # What are we doing with room_map here? Is it necessary?
             if _room.parent.name not in self.room_map:
                 self.room_map[_room.parent.name] = {}
             if _room.name not in self.room_map[_room.parent.name]:
@@ -78,6 +81,8 @@ class NautobotAdapter(DiffSync):
                         room = dcim.NautobotRoom(
                             name=_room.name,
                             uuid=_room.id,
+                            # Room status is different to building status, we do want to update it if the room is marked as inactive in Tenant API.
+                            # So we need to include status in the DiffSync.
                             status__name=_room.status.name,
                             external_id=int(_room.custom_field_data.get("external_id")),
                             parent__name=_room.parent.name,

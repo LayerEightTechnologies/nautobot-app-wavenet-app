@@ -46,6 +46,8 @@ class NautobotBuilding(Building):
         new_building.validated_save()
         if attrs.get("external_id"):
             new_building.custom_field_data.update({"external_id": attrs["external_id"]})
+            # TODO: Add technical_reference to custom fields
+            # TODO: Add longitude and latitude values to building
             new_building.validated_save()
         diffsync.building_map[ids["name"]] = new_building.id
         return super().create(ids=ids, diffsync=diffsync, attrs=attrs)

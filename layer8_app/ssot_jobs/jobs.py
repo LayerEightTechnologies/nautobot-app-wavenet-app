@@ -1,5 +1,6 @@
 """Jobs for Layer8 integration with SSoT App."""
 
+from diffsync.enum import DiffSyncFlags
 from django.urls import reverse
 from nautobot.extras.jobs import BooleanVar, ChoiceVar
 from nautobot_ssot.jobs.base import DataSource, DataMapping
@@ -98,6 +99,15 @@ class AuvikDataSource(DataSource):
         description="Choose a building to synchronize from Auvik. <br /><small>Note: building must already be mapped to an Auvik Tenant in the <a href='/admin/layer8_app/auviktenantbuildingrelationship/'>admin section</a>.</small>",
         choices=AuvikTenantBuildingRelationship.objects.values_list("auvik_tenant_id", "building__name"),
     )
+
+    # Add DiffSync_Flags to skip unmatched records in Nautobot
+    # i.e. if a record is in Nautobot but not in Auvik, it will not be deleted
+    # This is useful for keeping records in Nautobot that are not present in / managed by Auvik
+    # https://diffsync.readthedocs.io/en/latest/core_engine/index.html#global-and-model-flags
+    def __init__(self):
+        """Initialize the Auvik Data Source."""
+        super().__init__()
+        self.diffsync_flags = DiffSyncFlags.SKIP_UNMATCHED_DST
 
     class Meta:
         """Metadata for the data source."""
