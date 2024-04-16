@@ -127,7 +127,7 @@ def fetch_all_pages(api_instance, method_name, **kwargs):
                 converted_params = kwargs
 
             method_to_call = getattr(api_instance, method_name)
-            print(f"Calling {method_name} with parameters: {converted_params}")
+            # print(f"Calling {method_name} with parameters: {converted_params}")
             api_response = method_to_call(**converted_params)
 
             all_items.extend(api_response.data)

@@ -375,6 +375,13 @@ class NautobotInterface(Interface):
             existing_interface = OrmInterface.objects.get(
                 name=ids["name"], device__name=ids["device__name"], device__location__name=ids["device__location__name"]
             )
+            if attrs.get("monitoring_profile"):
+                existing_interface.custom_field_data.update({"monitoring_profile": attrs["monitoring_profile"]})
+                existing_interface.validated_save()
+                if diffsync.job.debug:
+                    diffsync.job.logger.info(
+                        f"Updated monitoring profile for existing interface: {existing_interface.name} on {existing_interface.device.name} at {existing_interface.device.location.name}: ```{attrs['monitoring_profile']}```"
+                    )
             if diffsync.job.debug:
                 diffsync.job.logger.info(
                     f"Interface already exists: {existing_interface.name}, potentially from Device Type template, not attempting to create again"
@@ -411,9 +418,28 @@ class NautobotInterface(Interface):
 
     def update(self, attrs):
         """Update Interface object in Nautobot."""
-        # _interface = OrmInterface.objects.get(name=self.name)
+        try:
+            _interface = OrmInterface.objects.get(
+                name=self.name, device__name=self.device__name, device__location__name=self.device__location__name
+            )
+        except OrmInterface.DoesNotExist:
+            self.diffsync.job.logger.error(
+                f"Failed to update Interface: {self.name} on {self.device__name} at {self.device__location__name}"
+            )
+            return None
+        self.diffsync.job.logger.info("Running interface update, hopefully with monitoring profile")
+        if attrs.get("monitoring_profile"):
+            self.diffsync.job.logger.info("Updating monitoring profile")
+            _interface.custom_field_data.update({"monitoring_profile": attrs["monitoring_profile"]})
+            _interface.validated_save()
+            if self.diffsync.job.debug:
+                self.diffsync.job.logger.info(
+                    f"Updated monitoring profile for interface: {_interface.name} on {_interface.device.name} at {_interface.device.location.name}: ```{attrs['monitoring_profile']}```"
+                )
+        else:
+            self.diffsync.job.logger.info("No monitoring profile to update")
         if self.diffsync.job.debug:
-            self.diffsync.job.logger.info(f"NOT Updating Existing Interface")
+            self.diffsync.job.logger.info(f"NOT Updating Anything else on existing interface")
         return super().update(attrs)
 
     def delete(self):
