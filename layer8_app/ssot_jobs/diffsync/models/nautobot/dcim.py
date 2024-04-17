@@ -367,30 +367,79 @@ class NautobotInterface(Interface):
     def create(cls, diffsync, ids, attrs):
         """Create Interface object in Nautobot."""
         if diffsync.job.debug:
-            diffsync.job.logger.info(f"Creating Interface: {ids['name']}")
+            diffsync.job.logger.info(
+                f"Creating Interface if it doesn't already exist: {ids['name']} - {ids['device__name']} - {ids['device__location__name']}"
+            )
 
         try:
-            device = OrmDevice.objects.get(name=ids["device__name"], location__name=ids["device__location__name"])
-            status = OrmStatus.objects.get(name=attrs["status"])
-            new_interface = OrmInterface(
-                name=ids["name"],
-                device=device,
-                description=attrs["description"],
-                mgmt_only=attrs["mgmt_only"],
-                status=status,
-                type=attrs["type"],
+            existing_interface = OrmInterface.objects.get(
+                name=ids["name"], device__name=ids["device__name"], device__location__name=ids["device__location__name"]
             )
-            new_interface.validated_save()
-        except ValidationError as e:
-            diffsync.job.logger.error(f"Failed to create Interface: {e} - {ids['name']}")
-            return None
+            if attrs.get("monitoring_profile"):
+                existing_interface.custom_field_data.update({"monitoring_profile": attrs["monitoring_profile"]})
+                existing_interface.validated_save()
+                if diffsync.job.debug:
+                    diffsync.job.logger.info(
+                        f"Updated monitoring profile for existing interface: {existing_interface.name} on {existing_interface.device.name} at {existing_interface.device.location.name}: ```{attrs['monitoring_profile']}```"
+                    )
+            if diffsync.job.debug:
+                diffsync.job.logger.info(
+                    f"Interface already exists: {existing_interface.name}, potentially from Device Type template, not attempting to create again"
+                )
+        except OrmInterface.DoesNotExist:
+            try:
+                device = OrmDevice.objects.get(name=ids["device__name"], location__name=ids["device__location__name"])
+                status = OrmStatus.objects.get(name=attrs["status"])
+                if ids["name"] != "mgmt0":
+                    status = OrmStatus.objects.get(
+                        name="Planned"
+                    )  # Set status to Planned for new interfaces from Auvik, because they will need to be validated.
+                if attrs["description"] is None:
+                    attrs["description"] = (
+                        "Interface created by Auvik Sync, please validate and update/remove interface status and this notice once complete."
+                    )
+                new_interface = OrmInterface(
+                    name=ids["name"],
+                    device=device,
+                    description=attrs["description"],
+                    mgmt_only=attrs["mgmt_only"],
+                    status=status,
+                    type=attrs["type"],
+                )
+                if attrs.get("monitoring_profile"):
+                    new_interface.custom_field_data.update({"monitoring_profile": attrs["monitoring_profile"]})
+                new_interface.validated_save()
+                if diffsync.job.debug:
+                    diffsync.job.logger.info(f"Interface does not already exist, created: {ids['name']}")
+            except ValidationError as e:
+                diffsync.job.logger.error(f"Failed to create Interface: {e} - {ids['name']}")
+                return None
         return super().create(ids=ids, diffsync=diffsync, attrs=attrs)
 
     def update(self, attrs):
         """Update Interface object in Nautobot."""
-        _interface = OrmInterface.objects.get(name=self.name)
+        try:
+            _interface = OrmInterface.objects.get(
+                name=self.name, device__name=self.device__name, device__location__name=self.device__location__name
+            )
+        except OrmInterface.DoesNotExist:
+            self.diffsync.job.logger.error(
+                f"Failed to update Interface: {self.name} on {self.device__name} at {self.device__location__name}"
+            )
+            return None
+        self.diffsync.job.logger.info("Running interface update, hopefully with monitoring profile")
+        if attrs.get("monitoring_profile"):
+            self.diffsync.job.logger.info("Updating monitoring profile")
+            _interface.custom_field_data.update({"monitoring_profile": attrs["monitoring_profile"]})
+            _interface.validated_save()
+            if self.diffsync.job.debug:
+                self.diffsync.job.logger.info(
+                    f"Updated monitoring profile for interface: {_interface.name} on {_interface.device.name} at {_interface.device.location.name}: ```{attrs['monitoring_profile']}```"
+                )
+        else:
+            self.diffsync.job.logger.info("No monitoring profile to update")
         if self.diffsync.job.debug:
-            self.diffsync.job.logger.info(f"Updating Interface: {_interface.name}")
+            self.diffsync.job.logger.info(f"NOT Updating Anything else on existing interface")
         return super().update(attrs)
 
     def delete(self):

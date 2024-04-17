@@ -1,6 +1,6 @@
 """Test jobs for the Layer 8 app."""
 
-from nautobot.apps.jobs import ChoiceVar, Job, register_jobs
+from nautobot.apps.jobs import ChoiceVar, Job, register_jobs, JobButtonReceiver
 
 from .helpers.tenant_api import fetch_buildings_list, get_building_data
 from .helpers.auvik_api import (
@@ -16,6 +16,7 @@ from .helpers.auvik_api import (
 from .ssot_jobs.jobs import AuvikDataSource, Layer8DataSource
 
 from .models import AuvikTenant, AuvikDeviceVendors, AuvikDeviceModels
+from nautobot.dcim.models import Location, Interface, Device
 
 name = "Layer8 App Jobs"
 
@@ -128,6 +129,68 @@ class LoadAuvikVendorsAndModels(Job):
         self.logger.info("Auvik device vendors and models loaded successfully.")
 
 
+class SetPrimaryWanInterface(JobButtonReceiver):
+    """Class to provide a job that sets the primary WAN interface on a device."""
+
+    class Meta:
+        """Metadata for the job."""
+
+        name = "Set Primary WAN Interface"
+
+    def receive_job_button(self, obj):
+        """Run the job."""
+        user = self.user
+        self.logger.info(f"Setting primary WAN interface for location: ```{obj.__dict__}```")
+        # Set the primary WAN interface here
+        if not user.has_perm("dcim.change_interface"):
+            self.logger.error(f"User {user} does not have permission to change interfaces.")
+            return
+        try:
+            if (
+                obj._custom_field_data.get("monitoring_profile")["monitoredBy"] is None
+                or obj._custom_field_data.get("monitoring_profile")["monitoringFields"]["interfaceId"] is None
+            ):
+                self.logger.error(f"No monitoring profile set for location: {obj.id}")
+                return
+        except KeyError:
+            self.logger.error(f"No monitoring profile set for location: {obj.id}")
+            return
+        try:
+            location = Location.objects.get(name=obj.device.location.name)
+            device = Device.objects.get(id=obj.device.id)
+            device_auvik_id = device.custom_field_data.get("monitoring_profile")["monitoringFields"]["deviceId"]
+            self.logger.info(f"Location found. ```{location.__dict__}```")
+            location.custom_field_data.update(
+                {
+                    "monitoring_profile": {
+                        "monitoredBy": "auvik",
+                        "monitoringFields": {
+                            "deviceId": device_auvik_id,
+                            "wanInterfaceId": obj._custom_field_data.get("monitoring_profile")["monitoringFields"][
+                                "interfaceId"
+                            ],
+                        },
+                    }
+                }
+            )
+            location.validated_save()
+        except Location.DoesNotExist:
+            self.logger.error(f"Location not found for location: {obj.id}")
+            return
+        except Device.DoesNotExist:
+            self.logger.error(f"Device not found for location: {obj.id}")
+            return
+        except KeyError:
+            self.logger.error(f"Monitoring profile not found for location: {obj.id}")
+            return
+        except Exception as e:
+            self.logger.error(f"Failed to set primary WAN interface: {e}")
+            return
+        self.logger.info(
+            f"Primary WAN interface set for location: {obj._custom_field_data.get('monitoring_profile')}, {obj.id}"
+        )
+
+
 jobs = [
     LoadAuvikTenants,
     # LoadBuildings,
@@ -135,5 +198,6 @@ jobs = [
     Layer8DataSource,
     AuvikDataSource,
     LoadAuvikVendorsAndModels,
+    SetPrimaryWanInterface,
 ]
 register_jobs(*jobs)

@@ -319,13 +319,32 @@ class NautobotAuvikAdapter(DiffSync):
                         f"Device {device.name} does not have a management IP address. Not loading. Interface details: {_interface.__dict__}. Exception: {err}"
                     )
 
-    # def load_interfaces(self):
-    #     """
-    #     Load interfaces for devices from Nautobot.
+    def load_interfaces(self):
+        """Load interfaces for devices from Nautobot."""
+        try:
+            interfaces = Interface.objects.filter(device__location__name=self.building_name)
+        except Interface.DoesNotExist:
+            if self.job.debug:
+                self.job.logger.info(f"No interfaces found for {self.device.name} in Nautobot. Not loading.")
+            return
 
-    #     Loads only one interface per device. The interface will be the management interface for the device.
-    #     """
-    #     pass
+        for _interface in interfaces:
+            if _interface.name == "mgmt0":
+                continue
+
+            interface = self.interface(
+                name=_interface.name,
+                device__name=_interface.device.name,
+                device__location__name=_interface.device.location.name,
+                type=_interface.type,
+                status=_interface.status.name,
+                monitoring_profile=_interface.custom_field_data.get("monitoring_profile"),
+            )
+            self.add(interface)
+            _device = self.get(self.device, f"{_interface.device.name}__{_interface.device.location.name}")
+            _device.add_child(child=interface)
+            if self.job.debug:
+                self.job.logger.info(f"Added Nautobot Interface: ```{interface.__dict__}```")
 
     # def load_ipaddrs(self):
     #     """
@@ -380,4 +399,5 @@ class NautobotAuvikAdapter(DiffSync):
         self.load_vlans()
         self.load_prefixes()
         self.load_devices()
+        self.load_interfaces()
         self.load_cables()

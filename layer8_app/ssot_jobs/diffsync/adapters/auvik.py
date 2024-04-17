@@ -45,6 +45,54 @@ class AuvikAdapter(DiffSync):
             self.building_name = None
             return
 
+        # Global data structures for storing device and interface information
+        self.device_data = {}
+        self.device_map = {}
+        self.interface_data = {}
+
+        try:
+            device_api_instance = auvik_api_device(self.auvik)
+            auvik_tenant_id = AuvikTenant.objects.get(id=self.job.building_to_sync).auvik_tenant_id
+            params = {
+                "tenants": auvik_tenant_id,
+                "page_first": 100,
+            }
+            devices = fetch_all_pages(device_api_instance, "read_multiple_device_info", **params)
+            self.device_data = devices
+
+            for device in devices:
+                self.device_map[device.id] = device
+            # self.device_data = fetch_all_pages(device_api_instance, "read_multiple_device_info", **params)
+        except Exception as err:
+            self.job.logger.error(f"Error fetching devices from Auvik: {err}")
+
+        # self.interface_data must be populated for each device in self.device_data
+        try:
+            interface_api_instance = auvik_api_interface(self.auvik)
+            for device in self.device_data:
+                device_id = device.id
+                params_ethernet = {
+                    "filter_parent_device": device_id,
+                    "filter_interface_type": "ethernet",
+                    "page_first": 1000,
+                }
+                interfaces_ethernet = fetch_all_pages(
+                    interface_api_instance, "read_multiple_interface_info", **params_ethernet
+                )
+
+                params_link_aggregation = {
+                    "filter_parent_device": device_id,
+                    "filter_interface_type": "linkAggregation",
+                    "page_first": 1000,
+                }
+                interfaces_link_aggregation = fetch_all_pages(
+                    interface_api_instance, "read_multiple_interface_info", **params_link_aggregation
+                )
+
+                self.interface_data[device_id] = interfaces_ethernet + interfaces_link_aggregation
+        except Exception as err:
+            self.job.logger.error(f"Error fetching interfaces from Auvik: {err}")
+
     def load_namespaces(self):
         """Load namespace for building from Auvik."""
         self.job.logger.info(f"auvik_tenant_id: {self.job.building_to_sync}")
@@ -146,13 +194,7 @@ class AuvikAdapter(DiffSync):
 
     def load_devices(self):
         """Load devices for building from Auvik API."""
-        api_instance = auvik_api_device(self.auvik)
-        auvik_tenant_id = AuvikTenant.objects.get(id=self.job.building_to_sync).auvik_tenant_id
-        params = {
-            "tenants": auvik_tenant_id,
-            "page_first": 100,
-        }
-        auvik_devices = fetch_all_pages(api_instance, "read_multiple_device_info", **params)
+        auvik_devices = self.device_data
 
         # Create a dictionary of device names to device IDs for use in creating device interconnections
         device_names = {}
@@ -284,17 +326,67 @@ class AuvikAdapter(DiffSync):
             if self.job.debug:
                 self.job.logger.info(f"Added Auvik Device: ```{device.__dict__}```")
 
-    # Implementation of (parent) load_devices, (-> child) load_interfaces and (-> child) load_ipaddrs methods
-    # Interfaces - let's actually not create all interfaces from Auvik, instead we'll create just a management interface
-    # if it does not exist already using get_or_create. That's what we'll assign the management IP to.
-    # ALL DONE as part of the load_devices method, as we only need to create the mgmt0 interface for each device and assign
-    # it's MGMT VRF IP address (10.xxx.10.xxx).
+        if self.job.debug:
+            identifiers = tuple(device.get_identifiers() for device in self.get_all("device"))
+            print(f"Device Identifiers for DiffSync: ```{identifiers}```")
 
-    # TODO: Load device interconnections from Auvik API
-    # This is likely to involve, for each device, calling the "Read Multiple Interfaces" endpoint and recording any interface
-    # that has values in connectedTo. We record the Name and ID of the device interface and the ifName and ID of the connectedTo interface.
-    # We'll likely need to create a dictionary of interfaces and their connectedTo interfaces and then go through that dictionary and
-    # create the connections.
+    # Implementation of (parent) load_devices, (-> child) load_interfaces and (-> child) load_ipaddrs methods
+    # We are going to load the interfaces for every device, and we're going to create interfaces that haven't already been created
+    # by the device type template.
+
+    def load_interfaces(self):
+        """Load interfaces for building from Auvik API."""
+        for device_id, interfaces in self.interface_data.items():
+            for interface in interfaces:
+                interface_name = interface.attributes.interface_name
+                if interface_name == "me0":
+                    continue
+
+                interface_type = interface.attributes.interface_type
+                if interface_type == "ethernet":
+                    interface_type = "1000base-t"
+                elif interface_type == "linkAggregation":
+                    interface_type = "virtual"
+
+                device_name = self.device_map[device_id].attributes.device_name
+                device = self.get(
+                    self.device, f"{device_name}__{self.building_name.name}"
+                )  # uid for the device is the device name and building name
+
+                monitoring_profile = {
+                    "monitoredBy": "auvik",
+                    "monitoringFields": {
+                        "interfaceId": interface.id,
+                    },
+                }
+
+                # Load interface for every device
+                interface = self.interface(
+                    name=interface_name,
+                    device__name=device_name,
+                    device__location__name=self.building_name.name,
+                    type=interface_type,
+                    monitoring_profile=monitoring_profile,
+                    status="Active",
+                )
+                self.add(interface)
+                device.add_child(interface)
+
+                if self.job.debug:
+                    self.job.logger.info(f"Added Auvik Interface: ```{interface.__dict__}```")
+
+                # # Load IP Address for every interface
+                # if interface.attributes.ip_addresses is not None:
+                #     for _ip in interface.attributes.ip_addresses:
+                #         ipaddr = self.ipaddr(
+                #             address=_ip,
+                #             namespace=self.building_name.name,
+                #             interface__name=interface_name,
+                #             status="Active",
+                #             device=device_name,
+                #         )
+                #         self.add(ipaddr)
+                #         interface.add_child(ipaddr)
 
     def load_cables(self):
         """Load cables for building from Auvik API."""
@@ -327,133 +419,258 @@ class AuvikAdapter(DiffSync):
         return None
 
     def get_interface_connections(self):
-        """Get interface connections from Auvik API."""
-        # Pull devices for building (based on tenant ID) from Auvik API
-        processed_data = {}
+        """Get interface connections from Auvik API data."""
+        devices = self.device_data
+        device_info = {}
+        device_interfaces = {}
+        device_interface_names = {}
 
-        api_instance_devices = auvik_api_device(self.auvik)
-        auvik_tenant_id = AuvikTenant.objects.get(id=self.job.building_to_sync).auvik_tenant_id
-        params = {
-            "tenants": auvik_tenant_id,
-            "page_first": 1000,
-        }
-        devices = fetch_all_pages(api_instance_devices, "read_multiple_device_info", **params)
-
-        # For each device, pull interfaces and connected_to interfaces from Auvik API
-        device_names = {}
+        # Populate data from API
         for device in devices:
             device_id = device.id
             device_name = device.attributes.device_name
-            device_names[device_id] = device_name
+            device_interfaces[device_id] = []
 
-            api_instance_interfaces = auvik_api_interface(self.auvik)
-
-            params = {
-                "filter_parent_device": device_id,
-                "filter_interface_type": "ethernet",
-                "page_first": 1000,
+            device_info[device_id] = {
+                "device_name": device_name,
+                "device_id": device_id,
+                "interfaces": [],
             }
-            interfaces = fetch_all_pages(api_instance_interfaces, "read_multiple_interface_info", **params)
+
+            interfaces = self.interface_data[device_id]
 
             for interface in interfaces:
-                if interface.relationships.connected_to.data:
-                    device_id = interface.relationships.parent_device.data.id
-                    interface_id = interface.id
-                    interface_name = interface.attributes.interface_name
+                device_interface_names[interface.id] = {
+                    "name": interface.attributes.interface_name,
+                    "device_id": device_id,
+                    "device_name": device_name,
+                }
+                device_interfaces[device_id].append(interface)
 
-                    # Initialize the device in the dictionary if it doesn't already exist
-                    if device_id not in processed_data:
-                        processed_data[device_id] = {}
+        # Process the interfaces to build the connections
+        for device in devices:
+            device_id = device.id
+            device_name = device.attributes.device_name
 
-                    # Store the connected interface IDs within the structured dictionary
-                    for connected_interface in interface.relationships.connected_to.data:
-                        connected_interface_id = connected_interface.id
-                        if interface_id not in processed_data[device_id]:
-                            processed_data[device_id][interface_id] = {
-                                "interface_name": interface_name,
-                                "connected_to": [],
+            for interface in device_interfaces[device_id]:
+                connected_to = []
+                for connected_to_id in interface.relationships.connected_to.data:
+                    # Only consider interfaces that are in the device_interface_names dictionary
+                    if connected_to_id.id in device_interface_names:
+                        connected_to.append(
+                            {
+                                "connected_interface_id": connected_to_id.id,
+                                "connected_interface_name": device_interface_names.get(connected_to_id.id, "Unknown")[
+                                    "name"
+                                ],
+                                "connected_device_id": device_interface_names.get(connected_to_id.id, "Unknown")[
+                                    "device_id"
+                                ],
+                                "connected_device_name": device_interface_names.get(connected_to_id.id, "Unknown")[
+                                    "device_name"
+                                ],
                             }
-
-                        processed_data[device_id][interface_id]["connected_to"].append(connected_interface_id)
-
-        # Create a dictionary of interface names for use in creating device interconnections
-        interface_names = {}
-        for device_id, interfaces in processed_data.items():
-            for interface_id, interface_details in interfaces.items():
-                interface_names[interface_id] = interface_details["interface_name"]
-
-        connections = []
-        processed_connections = set()
-
-        # Create a list of connections based on the processed data
-        for device_id, interfaces in processed_data.items():
-            for interface_id, interface_details in interfaces.items():
-                from_device_id = device_id
-                from_device_name = device_names.get(device_id, "Unknown")
-                from_interface_id = interface_id
-                from_interface_name = interface_names.get(interface_id, "Unknown")
-
-                for connected_interface_id in interface_details["connected_to"]:
-                    to_device_id = self.find_device_id_for_interface(connected_interface_id, processed_data)
-                    to_device_name = device_names.get(to_device_id, "Unknown")
-                    to_interface_id = connected_interface_id
-                    to_interface_name = interface_names.get(connected_interface_id, "Unknown")
-
-                    # Create a sorted tuple of interface IDs as a unique identifier for the connection
-                    connection_identifier = tuple(sorted([from_interface_id, to_interface_id]))
-
-                    if connection_identifier not in processed_connections:
-                        processed_connections.add(connection_identifier)
-
-                        connection = {
-                            "from": {
-                                "device_id": from_device_id,
-                                "device_name": from_device_name,
-                                "interface_id": from_interface_id,
-                                "interface_name": from_interface_name,
-                            },
-                            "to": {
-                                "device_id": to_device_id,
-                                "device_name": to_device_name,
-                                "interface_id": to_interface_id,
-                                "interface_name": to_interface_name,
-                            },
+                        )
+                # Only add interfaces that have exactly one connection
+                # Ignore interfaces without connections
+                # Ignore interfaces with multiple connections because they don't represent physical connections (cables)
+                if len(connected_to) == 1:
+                    device_info[device_id]["interfaces"].append(
+                        {
+                            "interface_id": interface.id,
+                            "interface_name": interface.attributes.interface_name,
+                            "connected_to": connected_to,
                         }
+                    )
 
-                        # Add the connection to the list
-                        connections.append(connection)
+        # Consolidate the connections
+        device_connections = []
+        for device_id, device_data in device_info.items():
+            for interface in device_data["interfaces"]:
+                # Ignore me0 interface as this is not a physical connection
+                if interface["interface_name"] == "me0":
+                    continue
+                # If a physical interface is connected to me0, find the correct connection
+                if interface["connected_to"][0]["connected_interface_name"] == "me0":
+                    correct_connected_to = next(
+                        (iface for iface in device_data["interfaces"] if iface["interface_name"] == "me0"),
+                        None,
+                    )
+                    if correct_connected_to is None:
+                        continue
+                    else:
+                        correct_connected_to = correct_connected_to["connected_to"]
+                    interface["connected_to"] = correct_connected_to
+                device_connections.append(
+                    {
+                        "from": {
+                            "device_id": device_id,
+                            "device_name": device_data["device_name"],
+                            "interface_id": interface["interface_id"],
+                            "interface_name": interface["interface_name"],
+                        },
+                        "to": {
+                            "device_id": interface["connected_to"][0]["connected_device_id"],
+                            "device_name": interface["connected_to"][0]["connected_device_name"],
+                            "interface_id": interface["connected_to"][0]["connected_interface_id"],
+                            "interface_name": interface["connected_to"][0]["connected_interface_name"],
+                        },
+                    }
+                )
 
-        # Merge connections where there are multiple records for the same device pair
-        # (where one connection is represented by two pairs, each including an arbitrary "me0" interface)
-        connections_dict = {}
-        for connection in connections:
-            from_id, to_id = connection["from"]["interface_id"], connection["to"]["interface_id"]
+        # Remove duplicates from the connections, regardless of direction
+        seen = set()
+        unique_connections = []
+        duplicates_found = 0
 
-            if from_id is None or to_id is None:
-                continue
+        for connection in device_connections:
+            conn_tuple = frozenset(
+                {
+                    (
+                        connection["from"]["device_id"],
+                        connection["from"]["interface_id"],
+                    ),
+                    (connection["to"]["device_id"], connection["to"]["interface_id"]),
+                }
+            )
+            if conn_tuple not in seen:
+                seen.add(conn_tuple)
+                unique_connections.append(connection)
+            else:
+                duplicates_found += 1
+                pass
 
-            device_pair = tuple(sorted([from_id, to_id]))
+        return unique_connections
 
-            if device_pair not in connections_dict:
-                connections_dict[device_pair] = []
+    # def get_interface_connections(self):
+    #     """Get interface connections from Auvik API."""
+    #     # Pull devices for building (based on tenant ID) from Auvik API
+    #     processed_data = {}
 
-            connections_dict[device_pair].append(connection)
+    #     # api_instance_devices = auvik_api_device(self.auvik)
+    #     # auvik_tenant_id = AuvikTenant.objects.get(id=self.job.building_to_sync).auvik_tenant_id
+    #     # params = {
+    #     #     "tenants": auvik_tenant_id,
+    #     #     "page_first": 1000,
+    #     # }
+    #     # devices = fetch_all_pages(api_instance_devices, "read_multiple_device_info", **params)
+    #     devices = self.device_data
 
-        merged_connections = []
-        for device_pair, pair_connections in connections_dict.items():
-            merged_conn = {"from": {}, "to": {}}
-            for conn in pair_connections:
-                if conn["from"]["interface_name"] != "me0" and conn["from"]["device_id"] is not None:
-                    merged_conn["from"] = conn["from"]
-                if conn["to"]["interface_name"] != "me0" and conn["to"]["device_id"] is not None:
-                    merged_conn["to"] = conn["to"]
+    #     # For each device, pull interfaces and connected_to interfaces from Auvik API
+    #     device_names = {}
+    #     for device in devices:
+    #         device_id = device.id
+    #         device_name = device.attributes.device_name
+    #         device_names[device_id] = device_name
 
-            if merged_conn["from"] and merged_conn["to"]:
-                merged_connections.append(merged_conn)
+    #         # api_instance_interfaces = auvik_api_interface(self.auvik)
+    #         # params = {
+    #         #     "filter_parent_device": device_id,
+    #         #     "filter_interface_type": "ethernet",
+    #         #     "page_first": 1000,
+    #         # }
+    #         # interfaces = fetch_all_pages(api_instance_interfaces, "read_multiple_interface_info", **params)
+    #         interfaces = self.interface_data[device_id]
 
-        connections = merged_connections
+    #         for interface in interfaces:
+    #             if interface.relationships.connected_to.data:
+    #                 device_id = interface.relationships.parent_device.data.id
+    #                 interface_id = interface.id
+    #                 interface_name = interface.attributes.interface_name
 
-        return connections
+    #                 # Initialize the device in the dictionary if it doesn't already exist
+    #                 if device_id not in processed_data:
+    #                     processed_data[device_id] = {}
+
+    #                 # Store the connected interface IDs within the structured dictionary
+    #                 for connected_interface in interface.relationships.connected_to.data:
+    #                     connected_interface_id = connected_interface.id
+    #                     if interface_id not in processed_data[device_id]:
+    #                         processed_data[device_id][interface_id] = {
+    #                             "interface_name": interface_name,
+    #                             "connected_to": [],
+    #                         }
+
+    #                     processed_data[device_id][interface_id]["connected_to"].append(connected_interface_id)
+
+    #     # Create a dictionary of interface names for use in creating device interconnections
+    #     interface_names = {}
+    #     for device_id, interfaces in processed_data.items():
+    #         for interface_id, interface_details in interfaces.items():
+    #             interface_names[interface_id] = interface_details["interface_name"]
+
+    #     connections = []
+    #     processed_connections = set()
+
+    #     # Create a list of connections based on the processed data
+    #     for device_id, interfaces in processed_data.items():
+    #         for interface_id, interface_details in interfaces.items():
+    #             from_device_id = device_id
+    #             from_device_name = device_names.get(device_id, "Unknown")
+    #             from_interface_id = interface_id
+    #             from_interface_name = interface_names.get(interface_id, "Unknown")
+
+    #             for connected_interface_id in interface_details["connected_to"]:
+    #                 to_device_id = self.find_device_id_for_interface(connected_interface_id, processed_data)
+    #                 to_device_name = device_names.get(to_device_id, "Unknown")
+    #                 to_interface_id = connected_interface_id
+    #                 to_interface_name = interface_names.get(connected_interface_id, "Unknown")
+
+    #                 # Create a sorted tuple of interface IDs as a unique identifier for the connection
+    #                 connection_identifier = tuple(sorted([from_interface_id, to_interface_id]))
+
+    #                 if connection_identifier not in processed_connections:
+    #                     processed_connections.add(connection_identifier)
+
+    #                     connection = {
+    #                         "from": {
+    #                             "device_id": from_device_id,
+    #                             "device_name": from_device_name,
+    #                             "interface_id": from_interface_id,
+    #                             "interface_name": from_interface_name,
+    #                         },
+    #                         "to": {
+    #                             "device_id": to_device_id,
+    #                             "device_name": to_device_name,
+    #                             "interface_id": to_interface_id,
+    #                             "interface_name": to_interface_name,
+    #                         },
+    #                     }
+
+    #                     # Add the connection to the list
+    #                     connections.append(connection)
+
+    #     # Merge connections where there are multiple records for the same device pair
+    #     # (where one connection is represented by two pairs, each including an arbitrary "me0" interface)
+    #     connections_dict = {}
+    #     for connection in connections:
+    #         from_id, to_id = connection["from"]["interface_id"], connection["to"]["interface_id"]
+
+    #         if from_id is None or to_id is None:
+    #             continue
+
+    #         device_pair = tuple(sorted([from_id, to_id]))
+
+    #         if device_pair not in connections_dict:
+    #             connections_dict[device_pair] = []
+
+    #         connections_dict[device_pair].append(connection)
+
+    #     merged_connections = []
+    #     for device_pair, pair_connections in connections_dict.items():
+    #         merged_conn = {"from": {}, "to": {}}
+    #         for conn in pair_connections:
+    #             if conn["from"]["interface_name"] != "me0" and conn["from"]["device_id"] is not None:
+    #                 merged_conn["from"] = conn["from"]
+    #             if conn["to"]["interface_name"] != "me0" and conn["to"]["device_id"] is not None:
+    #                 merged_conn["to"] = conn["to"]
+
+    #         if merged_conn["from"] and merged_conn["to"]:
+    #             merged_connections.append(merged_conn)
+
+    #     connections = merged_connections
+
+    #     return connections
 
     def load(self):
         """Load data from Auvik."""
@@ -462,4 +679,5 @@ class AuvikAdapter(DiffSync):
         self.load_vlans()
         self.load_prefixes()
         self.load_devices()
+        self.load_interfaces()
         self.load_cables()
