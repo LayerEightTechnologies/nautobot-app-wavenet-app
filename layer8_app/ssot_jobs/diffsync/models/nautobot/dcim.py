@@ -76,11 +76,12 @@ class NautobotBuilding(Building):
 
     def delete(self):
         """Delete Building object in Nautobot."""
-        _building = OrmLocation.objects.get(id=self.uuid)
-        if self.diffsync.job.debug:
-            self.diffsync.job.logger.info(f"Deleting Building: {_building.name}")
-        _building.delete()
-        return super().delete()
+        # _building = OrmLocation.objects.get(id=self.uuid)
+        # if self.diffsync.job.debug:
+        #     self.diffsync.job.logger.info(f"Deleting Building: {_building.name}")
+        # _building.delete()
+        # return super().delete()
+        pass
 
 
 class NautobotRoom(Room):
@@ -135,11 +136,12 @@ class NautobotRoom(Room):
         such as the parent building. Perhaps we would need to modify the status of the device to indicate that
         the device was in a deleted room.
         """
-        _room = OrmLocation.objects.get(id=self.uuid)
-        if self.diffsync.job.debug:
-            self.diffsync.job.logger.info(f"Deleting Room: {_room.name}")
-        _room.delete()
-        return super().delete()
+        # _room = OrmLocation.objects.get(id=self.uuid)
+        # if self.diffsync.job.debug:
+        #     self.diffsync.job.logger.info(f"Deleting Room: {_room.name}")
+        # _room.delete()
+        # return super().delete()
+        pass
 
 
 class NautobotNamespace(Namespace):
