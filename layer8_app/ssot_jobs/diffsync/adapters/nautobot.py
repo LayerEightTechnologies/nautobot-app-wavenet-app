@@ -130,8 +130,11 @@ class NautobotAuvikAdapter(DiffSync):
         self.sync = sync
         self.objects_to_delete = defaultdict(list)
         try:
+            # self.building_name = Location.objects.get(
+            #     id=AuvikTenantBuildingRelationship.objects.get(auvik_tenant=self.job.building_to_sync).building.id
+            # )
             self.building_name = Location.objects.get(
-                id=AuvikTenantBuildingRelationship.objects.get(auvik_tenant=self.job.building_to_sync).building.id
+                id=AuvikTenantBuildingRelationship.objects.get(id=self.job.building_to_sync.id).building.id
             )
         except Location.DoesNotExist:
             self.job.logger.error(f"Building ID {self.building_id} does not exist in Nautobot.")

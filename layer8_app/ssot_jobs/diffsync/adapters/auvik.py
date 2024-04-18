@@ -37,9 +37,17 @@ class AuvikAdapter(DiffSync):
         self.building_id = building_id
         self.auvik = auvik_api()
         try:
+            # self.building_name = Location.objects.get(
+            #     id=AuvikTenantBuildingRelationship.objects.get(auvik_tenant=self.job.building_to_sync).building.id
+            # )
+            # Update this to look up using the AuvikTenantBuildingRelationship ID
             self.building_name = Location.objects.get(
-                id=AuvikTenantBuildingRelationship.objects.get(auvik_tenant=self.job.building_to_sync).building.id
+                id=AuvikTenantBuildingRelationship.objects.get(id=self.job.building_to_sync.id).building.id
             )
+            # Also define here self.auvik_tenant_id, again looking it up using AuvikTenantBuildingRelationship ID
+            self.auvik_tenant_id = AuvikTenant.objects.get(
+                id=AuvikTenantBuildingRelationship.objects.get(id=self.job.building_to_sync.id).auvik_tenant_id
+            ).auvik_tenant_id
         except Location.DoesNotExist:
             self.job.logger.error(f"Building ID {self.building_id} does not exist in Nautobot.")
             self.building_name = None
@@ -52,7 +60,7 @@ class AuvikAdapter(DiffSync):
 
         try:
             device_api_instance = auvik_api_device(self.auvik)
-            auvik_tenant_id = AuvikTenant.objects.get(id=self.job.building_to_sync).auvik_tenant_id
+            auvik_tenant_id = self.auvik_tenant_id
             params = {
                 "tenants": auvik_tenant_id,
                 "page_first": 100,
@@ -125,7 +133,7 @@ class AuvikAdapter(DiffSync):
     def load_vlans(self):
         """Load VLANs for building from Auvik API."""
         api_instance = auvik_api_network(self.auvik)
-        auvik_tenant_id = AuvikTenant.objects.get(id=self.job.building_to_sync).auvik_tenant_id
+        auvik_tenant_id = self.auvik_tenant_id
         params = {
             "filter_network_type": "vlan",
             "tenants": auvik_tenant_id,
@@ -162,7 +170,7 @@ class AuvikAdapter(DiffSync):
     def load_prefixes(self):
         """Load prefixes for building from Auvik API."""
         api_instance = auvik_api_network(self.auvik)
-        auvik_tenant_id = AuvikTenant.objects.get(id=self.job.building_to_sync).auvik_tenant_id
+        auvik_tenant_id = self.auvik_tenant_id
         params = {
             "filter_network_type": "routed",
             "tenants": auvik_tenant_id,
