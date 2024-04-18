@@ -2,7 +2,7 @@
 
 from diffsync.enum import DiffSyncFlags
 from django.urls import reverse
-from nautobot.extras.jobs import BooleanVar, ChoiceVar
+from nautobot.extras.jobs import BooleanVar, ChoiceVar, ObjectVar
 from nautobot_ssot.jobs.base import DataSource, DataMapping
 
 from .diffsync.adapters.layer8 import Layer8Adapter
@@ -95,9 +95,17 @@ class AuvikDataSource(DataSource):
     """Class to provide a data source for Auvik integration with SSoT App."""
 
     debug = BooleanVar(description="Enable for more verbose debug logging", default=False)
-    building_to_sync = ChoiceVar(
-        description="Choose a building to synchronize from Auvik. <br /><small>Note: building must already be mapped to an Auvik Tenant in the <a href='/admin/layer8_app/auviktenantbuildingrelationship/'>admin section</a>.</small>",
-        choices=AuvikTenantBuildingRelationship.objects.values_list("auvik_tenant_id", "building__name"),
+    # building_to_sync = ChoiceVar(
+    #     description="Choose a building to synchronize from Auvik. <br /><small>Note: building must already be mapped to an Auvik Tenant in the <a href='/admin/layer8_app/auviktenantbuildingrelationship/'>admin section</a>.</small>",
+    #     choices=AuvikTenantBuildingRelationship.objects.values_list("auvik_tenant_id", "building__name"),
+    # )
+
+    building_to_sync = ObjectVar(
+        model=AuvikTenantBuildingRelationship,
+        display_field="building.name",
+        query_params={
+            "depth": 1,
+        },
     )
 
     # Add DiffSync_Flags to skip unmatched records in Nautobot
