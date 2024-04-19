@@ -469,17 +469,27 @@ class NautobotIPAddress(IPAddress):
         try:
             namespace = OrmNamespace.objects.get(name=ids["namespace"])
             status = OrmStatus.objects.get(name=attrs["status"])
-            new_ipaddress = OrmIPAddress(
-                address=ids["address"],
-                namespace=namespace,
-                status=status,
-            )
-            new_ipaddress.validated_save()
+            try:
+                existing_ip = OrmIPAddress.objects.get(address=ids["address"], namespace=namespace)
+                ipaddress = existing_ip
+                diffsync.job.logger.info(f"IPAddress already exists: {existing_ip.address}, skipping")
+            except OrmIPAddress.DoesNotExist:
+                try:
+                    new_ipaddress = OrmIPAddress(
+                        address=ids["address"],
+                        namespace=namespace,
+                        status=status,
+                    )
+                    new_ipaddress.validated_save()
+                    ipaddress = new_ipaddress
 
-        except ValidationError as e:
-            diffsync.job.logger.error(f"Failed to create IPAddress: {e} - {ids['address']}")
-            return None
+                except ValidationError as e:
+                    diffsync.job.logger.error(f"Failed to create IPAddress: {e} - {ids['address']}")
+                    return None
 
+                except Exception as e:
+                    diffsync.job.logger.error(f"Failed to create IPAddress: {e} - {ids['address']}")
+                    return None
         except Exception as e:
             diffsync.job.logger.error(f"Failed to create IPAddress: {e} - {ids['address']}")
             return None
@@ -488,10 +498,10 @@ class NautobotIPAddress(IPAddress):
             ip_interface = OrmInterface.objects.get(name=attrs["interface__name"], device__name=attrs["device"])
             diffsync.job.logger.info(f"Assigning IP to interface: {ip_interface.name}")
             assign_ip = IPAddressToInterface.objects.create(
-                ip_address=new_ipaddress, interface=ip_interface, vm_interface=None
+                ip_address=ipaddress, interface=ip_interface, vm_interface=None
             )
             assign_ip.validated_save()
-            assign_ip.interface.device.primary_ip4 = new_ipaddress
+            assign_ip.interface.device.primary_ip4 = ipaddress
             assign_ip.interface.device.validated_save()
         except Exception as e:
             diffsync.job.logger.error(f"Failed to assign IP to interface / set primary_ip4: {e}")
