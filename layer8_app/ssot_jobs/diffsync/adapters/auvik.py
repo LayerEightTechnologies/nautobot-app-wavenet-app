@@ -143,6 +143,12 @@ class AuvikAdapter(DiffSync):
 
         for _vlan in auvik_vlans:
             vlan_name = getattr(_vlan.attributes, "network_name", None)
+            if vlan_name is None or vlan_name == "":
+                vlan_name = getattr(_vlan.attributes, "description", None)
+                if vlan_name is None or vlan_name == "":
+                    if self.job.debug:
+                        self.job.logger.error(f"VLAN name is not set in Auvik. Skipping.")
+                    continue
             try:
                 vlan_id = int(getattr(_vlan.attributes, "description").split()[1])
             except ValueError:
