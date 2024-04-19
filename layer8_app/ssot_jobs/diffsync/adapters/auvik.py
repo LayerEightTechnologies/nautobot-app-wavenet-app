@@ -373,21 +373,23 @@ class AuvikAdapter(DiffSync):
                         "interfaceId": interface.id,
                     },
                 }
+                try:
+                    # Load interface for every device
+                    interface = self.interface(
+                        name=interface_name,
+                        device__name=device_name,
+                        device__location__name=self.building_name.name,
+                        type=interface_type,
+                        monitoring_profile=monitoring_profile,
+                        status="Active",
+                    )
+                    self.add(interface)
+                    device.add_child(interface)
 
-                # Load interface for every device
-                interface = self.interface(
-                    name=interface_name,
-                    device__name=device_name,
-                    device__location__name=self.building_name.name,
-                    type=interface_type,
-                    monitoring_profile=monitoring_profile,
-                    status="Active",
-                )
-                self.add(interface)
-                device.add_child(interface)
-
-                if self.job.debug:
-                    self.job.logger.info(f"Added Auvik Interface: ```{interface.__dict__}```")
+                    if self.job.debug:
+                        self.job.logger.info(f"Added Auvik Interface: ```{interface.__dict__}```")
+                except ObjectAlreadyExists as err:
+                    self.job.logger.info(f"Interface already exists: {err}, skipping {interface.__dict__}")
 
                 # # Load IP Address for every interface
                 # if interface.attributes.ip_addresses is not None:
