@@ -17,7 +17,7 @@ from ..helpers.auvik_api import get_auvik_credentials
 from ..helpers.get_m2m_token import get_api_token
 from ..models import AuvikTenantBuildingRelationship
 
-name = "SSoT - Layer8"  # pylint:disable=invalid-name
+name = "Wavenet App SSoT Jobs"  # pylint:disable=invalid-name
 
 
 def tenant_api(get_api_token=get_api_token):
@@ -40,9 +40,9 @@ class Layer8DataSource(DataSource):
     class Meta:
         """Metadata for the data source."""
 
-        name = "Layer8 Data Source"
-        data_source = "Layer8"
-        description = "Data source for Layer8 integration with SSoT App."
+        name = "Tenant API Data Source"
+        data_source = "Tenant API"
+        description = "Data source for Tenant API integration with Nautobot SSoT App."
         has_sensitive_variables = False
 
     @classmethod
@@ -66,11 +66,11 @@ class Layer8DataSource(DataSource):
     def load_source_adapter(self):
         """Load data from Layer8 into DiffSync models."""
         if self.debug:
-            self.logger.info("Connecting to Layer8 API...")
+            self.logger.info("Connecting to Wavenet Tenant API...")
         client = tenant_api()
         self.source_adapter = Layer8Adapter(job=self, sync=self.sync, api_client=client)
         if self.debug:
-            self.logger.info("Loading data from Layer8 API.")
+            self.logger.info("Loading data from Wavenet Tenant API.")
         self.source_adapter.load()
 
     def load_target_adapter(self):
@@ -103,6 +103,7 @@ class AuvikDataSource(DataSource):
     building_to_sync = ObjectVar(
         model=AuvikTenantBuildingRelationship,
         display_field="building.name",
+        description="Choose a building to synchronize from Auvik. <br /><small>Note: building must already be mapped to an Auvik Tenant in the <a href='/admin/layer8_app/auviktenantbuildingrelationship/'>admin section</a>.</small>",
         query_params={
             "depth": 1,
         },
@@ -122,23 +123,7 @@ class AuvikDataSource(DataSource):
 
         name = "Auvik Data Source"
         data_source = "Auvik"
-        description = """
-        <h2>Data source for Auvik integration with SSoT App.</h2> 
-        This data source will pull data from the Auvik API and synchronize it with Nautobot.<br /><br />
-        Records that will be synced include:
-        <ul>
-            <li>Networks</li>
-            <ul>
-                <li>VLANs</li>
-                <li>Prefixes</li>
-                <li>IP Addresses</li>
-            </ul>
-            <li>Devices</li>
-            <li>Interfaces</li>
-            <ul>
-                <li>Interface Connections</li>
-            </ul>
-        """
+        description = """This data source will pull data from the Auvik API and synchronize it with Nautobot."""
         has_sensitive_variables = False
 
     # Get the Auvik Tenant Building Relationship
