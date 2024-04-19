@@ -470,7 +470,7 @@ class NautobotIPAddress(IPAddress):
             namespace = OrmNamespace.objects.get(name=ids["namespace"])
             status = OrmStatus.objects.get(name=attrs["status"])
             try:
-                existing_ip = OrmIPAddress.objects.get(address=ids["address"], namespace=namespace)
+                existing_ip = OrmIPAddress.objects.get(address=ids["address"])
                 ipaddress = existing_ip
                 diffsync.job.logger.info(f"IPAddress already exists: {existing_ip.address}, skipping")
             except OrmIPAddress.DoesNotExist:
