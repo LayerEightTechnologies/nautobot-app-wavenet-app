@@ -480,6 +480,10 @@ class NautobotIPAddress(IPAddress):
             diffsync.job.logger.error(f"Failed to create IPAddress: {e} - {ids['address']}")
             return None
 
+        except Exception as e:
+            diffsync.job.logger.error(f"Failed to create IPAddress: {e} - {ids['address']}")
+            return None
+
         try:
             ip_interface = OrmInterface.objects.get(name=attrs["interface__name"], device__name=attrs["device"])
             diffsync.job.logger.info(f"Assigning IP to interface: {ip_interface.name}")

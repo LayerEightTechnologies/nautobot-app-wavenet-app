@@ -8,7 +8,7 @@ from diffsync.exceptions import ObjectAlreadyExists
 from django.db.models import Q
 
 from nautobot.dcim.models import Location, LocationType, Device, Cable, Interface
-from nautobot.ipam.models import Namespace, VLANGroup, VLAN, Prefix
+from nautobot.ipam.models import Namespace, VLANGroup, VLAN, Prefix, IPAddress
 from nautobot.extras.models import Status
 
 from ..models.nautobot import dcim
@@ -308,6 +308,22 @@ class NautobotAuvikAdapter(DiffSync):
                     )
                     self.add(ipaddr)
                     interface.add_child(child=ipaddr)
+                else:
+                    # Add check to see if IP address already exists
+                    _existing_ipaddr = IPAddress.objects.get(address=_ipaddr.address)
+                    if _existing_ipaddr is not None:
+                        if self.job.debug:
+                            self.job.logger.info(
+                                f"IP Address: {_ipaddr.address} already exists in Nautobot but not assigned to this interface {_interface.name}."
+                            )
+                            ipaddr = self.ipaddr(
+                                address=_existing_ipaddr.address,
+                                namespace=_existing_ipaddr.parent.namespace.name,
+                                interface__name=None,
+                                status=_existing_ipaddr.status.name,
+                                device=None,
+                            )
+                            self.add(ipaddr)
             except AttributeError as err:
                 if self.job.debug:
                     self.job.logger.info(
