@@ -34,7 +34,7 @@ def tenant_api(get_api_token=get_api_token):
     return api_instance
 
 
-name = "Layer8 App SSOT Jobs"  # pylint:disable=invalid-name
+name = "Wavenet App SSoT Jobs"  # pylint:disable=invalid-name
 building_location_type = LocationType.objects.get_or_create(name="Building")[0]
 
 

@@ -18,7 +18,7 @@ from .ssot_jobs.jobs import AuvikDataSource, Layer8DataSource
 from .models import AuvikTenant, AuvikDeviceVendors, AuvikDeviceModels
 from nautobot.dcim.models import Location, Interface, Device
 
-name = "Layer8 App Jobs"
+name = "Wavenet App Jobs"
 
 
 class LoadBuildings(Job):

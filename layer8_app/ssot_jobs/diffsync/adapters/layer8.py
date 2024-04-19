@@ -61,7 +61,7 @@ class Layer8Adapter(DiffSync):
             ):
                 if self.job.debug:
                     self.job.logger.info(
-                        f"Loading Room from Layer8: {record['room_number']} ({record['building']['building_name']})"
+                        f"Loading Room from Tenant API: {record['room_number']} ({record['building']['building_name']})"
                     )
                 # Room Status should be set to "Planned" for new rooms, and "Retired" for rooms that are no longer active.
                 # For existing rooms, we don't want to update the status. How can we achieve this?
@@ -81,7 +81,7 @@ class Layer8Adapter(DiffSync):
                     _building = self.get(self.building, record["building"]["building_name"])
                     if self.job.debug:
                         self.job.logger.info(
-                            f"Loaded Room from Layer8 with data: {room.name} - {room.status__name} - {room.external_id} - {room.parent__name}"
+                            f"Loaded Room from Tenant API with data: {room.name} - {room.status__name} - {room.external_id} - {room.parent__name}"
                         )
                     if _building:
                         self.add(room)
