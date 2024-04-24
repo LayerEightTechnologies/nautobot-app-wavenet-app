@@ -347,6 +347,14 @@ class NautobotDevice(Device):
         _device = OrmDevice.objects.get(name=self.name)
         if self.diffsync.job.debug:
             self.diffsync.job.logger.info(f"Updating Device: {_device.name}")
+        # TODO - Add logic to update monitoring profile
+        if attrs.get("monitoring_profile"):
+            _device.custom_field_data.update({"monitoring_profile": attrs["monitoring_profile"]})
+            _device.validated_save()
+            if self.diffsync.job.debug:
+                self.diffsync.job.logger.info(
+                    f"Updated monitoring profile for device: {_device.name}: ```{attrs['monitoring_profile']}```"
+                )
         return super().update(attrs)
 
     def delete(self):
