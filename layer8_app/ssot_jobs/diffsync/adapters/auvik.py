@@ -94,6 +94,7 @@ class AuvikAdapter(DiffSync):
                     "filter_parent_device": device_id,
                     "filter_interface_type": "linkAggregation",
                     "page_first": 1000,
+                    "tenants": auvik_tenant_id,
                 }
                 interfaces_link_aggregation = fetch_all_pages(
                     interface_api_instance, "read_multiple_interface_info", **params_link_aggregation
