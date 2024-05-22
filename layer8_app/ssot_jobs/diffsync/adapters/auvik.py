@@ -77,12 +77,14 @@ class AuvikAdapter(DiffSync):
         # self.interface_data must be populated for each device in self.device_data
         try:
             interface_api_instance = auvik_api_interface(self.auvik)
+            auvik_tenant_id = self.auvik_tenant_id
             for device in self.device_data:
                 device_id = device.id
                 params_ethernet = {
                     "filter_parent_device": device_id,
                     "filter_interface_type": "ethernet",
                     "page_first": 1000,
+                    "tenants": auvik_tenant_id,
                 }
                 interfaces_ethernet = fetch_all_pages(
                     interface_api_instance, "read_multiple_interface_info", **params_ethernet
@@ -221,6 +223,10 @@ class AuvikAdapter(DiffSync):
             if self.job.debug:
                 self.job.logger.info(f"Loading Device: {_device.attributes.device_name}")
 
+            # TODO: We need to force an error instead of continuing if a device make or model cannot be
+            # found in Nautobot. This is to ensure that we don't skip devices that are missing this information.
+            # We should also create a map of devices that have been skipped, so we can also skip trying to import interfaces for them.
+            # Log errors even if we're not in debug mode, to make it clear why the sync is failing.
             if _device.attributes.make_model is None or _device.attributes.vendor_name is None:
                 if self.job.debug:
                     self.job.logger.warning(
