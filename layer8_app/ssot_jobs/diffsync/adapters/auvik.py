@@ -332,17 +332,21 @@ class AuvikAdapter(DiffSync):
                 for _ip in _device.attributes.ip_addresses:
                     match = re.search(regex, _ip)
                     if match:
-                        self.job.logger.info(f"Found IP Mgmt Address: {_ip}, adding to DiffSync.")
-                        _mgmt_ip = match.group()
-                        ipaddr = self.ipaddr(
-                            address=_mgmt_ip,
-                            namespace=self.building_name.name,
-                            interface__name="mgmt0",
-                            status="Active",
-                            device=_device.attributes.device_name,
-                        )
-                        self.add(ipaddr)
-                        interface.add_child(ipaddr)
+                        try:
+                            self.job.logger.info(f"Found IP Mgmt Address: {_ip}, adding to DiffSync.")
+                            _mgmt_ip = match.group()
+                            ipaddr = self.ipaddr(
+                                address=_mgmt_ip,
+                                namespace=self.building_name.name,
+                                interface__name="mgmt0",
+                                status="Active",
+                                device=_device.attributes.device_name,
+                            )
+                            self.add(ipaddr)
+                            interface.add_child(ipaddr)
+
+                        except ObjectAlreadyExists as err:
+                            self.job.logger.info(f"IP Address already added to DiffSync, skipping: {err}")
 
             if self.job.debug:
                 self.job.logger.info(f"Added Auvik Device: ```{device.__dict__}```")
