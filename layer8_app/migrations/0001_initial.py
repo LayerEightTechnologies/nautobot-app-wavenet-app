@@ -10,20 +10,33 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('dcim', '0052_fix_interface_redundancy_group_created'),
+        ("dcim", "0052_fix_interface_redundancy_group_created"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='AuvikTenant',
+            name="AuvikTenant",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('name', models.CharField(max_length=255)),
-                ('auvik_tenant_id', models.CharField(max_length=255, unique=True)),
-                ('building', models.OneToOneField(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='auvik_tenant', to='dcim.location')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                ("auvik_tenant_id", models.CharField(max_length=255, unique=True)),
+                (
+                    "building",
+                    models.OneToOneField(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="auvik_tenant",
+                        to="dcim.location",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
     ]
