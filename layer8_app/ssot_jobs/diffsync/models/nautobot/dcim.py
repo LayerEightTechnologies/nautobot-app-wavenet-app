@@ -58,7 +58,7 @@ class NautobotBuilding(Building):
         if self.diffsync.job.debug:
             self.diffsync.job.logger.info(f"Updating Building: {_building.name}")
         """
-        Only update status if status__name is Old Building, indicating a retired 
+        Only update status if status__name is Old Building, indicating a retired
         building, otherwise leave as is
         """
         if attrs.get("status__name"):
@@ -293,11 +293,13 @@ class NautobotPrefix(Prefix):
         """Update Prefix object in Nautobot."""
         try:
             if self.diffsync.job.debug:
-                self.diffsync.job.logger.info(f"Attempting to update prefix: {_prefix.prefix}")
+                self.diffsync.job.logger.info(f"Attempting to update prefix: {self.prefix}")
             _prefix = OrmPrefix.objects.get(prefix=self.prefix, namespace=self.namespace)
+            if self.diffsync.job.debug:
+                self.diffsync.job.logger.info(f"Retrieved Nautobot existing prefix: {_prefix.prefix}")
         except Exception as e:
             if self.diffsync.job.debug:
-                self.diffsync.job.logger.info(f"Error when updating prefix: {_prefix.prefix}, {e}")
+                self.diffsync.job.logger.info(f"Error when updating prefix: {self.prefix}, {e}")
             return None
         return super().update(attrs)
 
@@ -454,7 +456,7 @@ class NautobotInterface(Interface):
         else:
             self.diffsync.job.logger.info("No monitoring profile to update")
         if self.diffsync.job.debug:
-            self.diffsync.job.logger.info(f"NOT Updating Anything else on existing interface")
+            self.diffsync.job.logger.info("NOT Updating Anything else on existing interface")
         return super().update(attrs)
 
     def delete(self):

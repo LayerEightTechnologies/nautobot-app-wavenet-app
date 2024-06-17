@@ -33,6 +33,7 @@ def fetch_buildings_list(get_api_token=get_api_token, configuration=configuratio
             ]
             return dropdown_values
         except ApiException as e:
+            print("Exception when calling DefaultApi->get_buildings_with_operator: %s\n" % e)
             return []
 
     # headers = {"Authorization": f"Bearer {api_token}"}

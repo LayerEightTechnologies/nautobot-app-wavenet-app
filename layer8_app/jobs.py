@@ -16,7 +16,7 @@ from .helpers.auvik_api import (
 from .ssot_jobs.jobs import AuvikDataSource, Layer8DataSource
 
 from .models import AuvikTenant, AuvikDeviceVendors, AuvikDeviceModels
-from nautobot.dcim.models import Location, Interface, Device
+from nautobot.dcim.models import Location, Device
 
 name = "Wavenet App Jobs"
 

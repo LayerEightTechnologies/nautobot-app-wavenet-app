@@ -1,6 +1,6 @@
 """Serializers for the Auvik integration app."""
 
-from nautobot.apps.api import ValidatedModelSerializer, NautobotModelSerializer
+from nautobot.apps.api import NautobotModelSerializer
 from ..models import AuvikTenantBuildingRelationship, AuvikTenant
 
 
