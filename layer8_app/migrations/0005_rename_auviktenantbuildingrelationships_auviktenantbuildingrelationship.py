@@ -6,13 +6,13 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dcim', '0052_fix_interface_redundancy_group_created'),
-        ('layer8_app', '0004_auto_20240320_1250'),
+        ("dcim", "0052_fix_interface_redundancy_group_created"),
+        ("layer8_app", "0004_auto_20240320_1250"),
     ]
 
     operations = [
         migrations.RenameModel(
-            old_name='AuvikTenantBuildingRelationships',
-            new_name='AuvikTenantBuildingRelationship',
+            old_name="AuvikTenantBuildingRelationships",
+            new_name="AuvikTenantBuildingRelationship",
         ),
     ]

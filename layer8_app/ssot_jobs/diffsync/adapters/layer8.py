@@ -51,7 +51,7 @@ class Layer8Adapter(DiffSync):
 
     def load_rooms(self):
         """Load Layer8 rooms."""
-        self.job.logger.info(f"Loading rooms...")
+        self.job.logger.info("Loading rooms...")
         response = self.layer8.get_rooms_with_building(page_size=10000, is_active=True)
         for record in response["rooms"]["items"]:
             if (
@@ -68,7 +68,7 @@ class Layer8Adapter(DiffSync):
                 # Probably handled in the DiffSync model, where we only set the status to planned for new objects, otherwise we set it to
                 # the existing status or Retired based on the below.
                 _status = "Planned"
-                if record["is_active"] == False:
+                if not record["is_active"]:
                     _status = "Retired"
                 room = self.room(
                     name=record["room_number"],

@@ -10,7 +10,7 @@ from nautobot.extras.models import Secret
 
 def get_api_token():
     """Get the API token from the Nautobot Jobs Gateway."""
-    auth_token_secret_name = "Nautobot Jobs Gateway M2M Token Auth"
+    auth_token_secret_name = "Nautobot Jobs Gateway M2M Token Auth"  # nosec B105
 
     try:
         auth_token_secret_object = Secret.objects.get(name=auth_token_secret_name)

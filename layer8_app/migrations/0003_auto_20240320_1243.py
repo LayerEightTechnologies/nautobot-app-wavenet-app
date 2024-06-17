@@ -7,18 +7,24 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dcim', '0052_fix_interface_redundancy_group_created'),
-        ('layer8_app', '0002_auviktenant_building_loc'),
+        ("dcim", "0052_fix_interface_redundancy_group_created"),
+        ("layer8_app", "0002_auviktenant_building_loc"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='auviktenant',
-            name='building_loc',
+            model_name="auviktenant",
+            name="building_loc",
         ),
         migrations.AlterField(
-            model_name='auviktenant',
-            name='building',
-            field=models.ForeignKey(limit_choices_to={'location_type__name': 'Building'}, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='building', to='dcim.location'),
+            model_name="auviktenant",
+            name="building",
+            field=models.ForeignKey(
+                limit_choices_to={"location_type__name": "Building"},
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="building",
+                to="dcim.location",
+            ),
         ),
     ]

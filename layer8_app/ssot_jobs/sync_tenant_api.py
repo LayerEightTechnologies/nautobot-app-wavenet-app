@@ -1,24 +1,16 @@
 """Nautobot SSOT App jobs for the Layer 8 app."""
 
-from typing import Optional, Mapping, List, Annotated
-from uuid import UUID
-from django.contrib.contenttypes.models import ContentType
-from django.templatetags.static import static
-from django.urls import reverse
+from typing import Annotated
 
 from nautobot.dcim.models import Location, LocationType
-from nautobot.apps.jobs import Job, StringVar, register_jobs
-from nautobot.extras.models import Status
 
 from diffsync import DiffSync
-from diffsync.enum import DiffSyncFlags
-from diffsync.exceptions import ObjectNotCreated
 
 import openapi_client
 from openapi_client.rest import ApiException
 
 from nautobot_ssot.contrib import NautobotModel, NautobotAdapter, CustomFieldAnnotation
-from nautobot_ssot.jobs.base import DataMapping, DataSource, DataTarget, DataSyncBaseJob
+from nautobot_ssot.jobs.base import DataSource
 
 from ..helpers.get_m2m_token import get_api_token
 

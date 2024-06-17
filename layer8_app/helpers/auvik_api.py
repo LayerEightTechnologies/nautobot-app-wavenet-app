@@ -16,8 +16,8 @@ import re
 
 def get_auvik_credentials():
     """Get the Auvik API credentials from the Nautobot Secrets."""
-    auvik_api_user_secret_name = "Auvik API Username"
-    auvik_api_key_secret_name = "Auvik API Password"
+    auvik_api_user_secret_name = "Auvik API Username"  # nosec B105
+    auvik_api_key_secret_name = "Auvik API Password"  # nosec B105
 
     try:
         auvik_api_user_secret_object = Secret.objects.get(name=auvik_api_user_secret_name)

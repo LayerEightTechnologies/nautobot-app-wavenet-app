@@ -9,7 +9,6 @@ from django.db.models import Q
 
 from nautobot.dcim.models import Location, LocationType, Device, Cable, Interface
 from nautobot.ipam.models import Namespace, VLANGroup, VLAN, Prefix, IPAddress
-from nautobot.extras.models import Status
 
 from ..models.nautobot import dcim
 from ....models import AuvikTenantBuildingRelationship
@@ -289,9 +288,11 @@ class NautobotAuvikAdapter(DiffSync):
                     )
                     self.add(interface)
                     device.add_child(child=interface)
-            except:
+            except Exception as e:
                 if self.job.debug:
-                    self.job.logger.info(f"Device {device.name} does not have a management interface. Not loading.")
+                    self.job.logger.info(
+                        f"Device {device.name} does not have a management interface. Not loading. ({e})"
+                    )
 
             # Load management IP address for device
             try:
@@ -403,7 +404,7 @@ class NautobotAuvikAdapter(DiffSync):
                     self.job.logger.info(f"Cable already exists: {err}")
             except Interface.DoesNotExist:
                 if self.job.debug:
-                    self.job.logger.info(f"Interface for cable does not exist in Nautobot. Not loading.")
+                    self.job.logger.info("Interface for cable does not exist in Nautobot. Not loading.")
 
     # TODO: Implement (parent) load_devices, (-> child) load_interfaces (mgmt if) and (-> child) load_ipaddrs (mgmt ip) methods
     # Load only one interface per device. The interface will be the management interface for the device.

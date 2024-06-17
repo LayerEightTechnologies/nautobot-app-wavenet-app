@@ -4,7 +4,6 @@ from diffsync import DiffSync
 from diffsync.exceptions import ObjectAlreadyExists
 from ..models.base import dcim
 from nautobot.dcim.models import Location, DeviceType, Manufacturer
-from nautobot.ipam.models import VLANGroup
 from ....models import AuvikTenantBuildingRelationship, AuvikTenant, AuvikDeviceModels, AuvikDeviceVendors
 from ....helpers.auvik_api import auvik_api, auvik_api_network, auvik_api_device, auvik_api_interface, fetch_all_pages
 import re
@@ -150,13 +149,13 @@ class AuvikAdapter(DiffSync):
                 vlan_name = getattr(_vlan.attributes, "description", None)
                 if vlan_name is None or vlan_name == "":
                     if self.job.debug:
-                        self.job.logger.error(f"VLAN name is not set in Auvik. Skipping.")
+                        self.job.logger.error("VLAN name is not set in Auvik. Skipping.")
                     continue
             try:
                 vlan_id = int(getattr(_vlan.attributes, "description").split()[1])
             except ValueError:
                 if self.job.debug:
-                    self.job.logger.error(f"VLAN ID is not a valid integer. Skipping.")
+                    self.job.logger.error("VLAN ID is not a valid integer. Skipping.")
                 continue
             if self.job.debug:
                 self.job.logger.info(f"Loading VLAN: {vlan_name} with ID {vlan_id}")
@@ -306,7 +305,7 @@ class AuvikAdapter(DiffSync):
                 self.add(device)
             except ObjectAlreadyExists as err:
                 self.job.logger.error(
-                    f"Device already imported from Auvik - this is a duplicate: {device.name} ({device.serial})"
+                    f"Device already imported from Auvik - this is a duplicate: {device.name} ({device.serial}), Err: ({err})"
                 )
                 continue
 

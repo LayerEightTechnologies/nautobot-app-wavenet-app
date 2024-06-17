@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('layer8_app', '0008_alter_auvikdevicevendors_auvik_vendor_name'),
+        ("layer8_app", "0008_alter_auvikdevicevendors_auvik_vendor_name"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='auvikdevicemodels',
-            name='auvik_model_name',
+            model_name="auvikdevicemodels",
+            name="auvik_model_name",
             field=models.CharField(max_length=255, unique=True),
         ),
     ]

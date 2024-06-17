@@ -2,7 +2,7 @@
 
 from diffsync.enum import DiffSyncFlags
 from django.urls import reverse
-from nautobot.extras.jobs import BooleanVar, ChoiceVar, ObjectVar
+from nautobot.extras.jobs import BooleanVar, ObjectVar
 from nautobot_ssot.jobs.base import DataSource, DataMapping
 
 from .diffsync.adapters.layer8 import Layer8Adapter
@@ -11,9 +11,6 @@ from .diffsync.adapters.nautobot import NautobotAdapter, NautobotAuvikAdapter
 
 import openapi_client
 
-import layer8_auvik_api_client
-
-from ..helpers.auvik_api import get_auvik_credentials
 from ..helpers.get_m2m_token import get_api_token
 from ..models import AuvikTenantBuildingRelationship
 

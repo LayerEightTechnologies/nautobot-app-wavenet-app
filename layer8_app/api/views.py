@@ -1,6 +1,5 @@
 """API views for the AuvikTenantBuildingRelationship model."""
 
-from rest_framework.viewsets import ModelViewSet
 from nautobot.apps.api import NautobotModelViewSet
 
 from ..models import AuvikTenantBuildingRelationship, AuvikTenant
