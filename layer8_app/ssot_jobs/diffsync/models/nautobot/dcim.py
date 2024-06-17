@@ -291,9 +291,14 @@ class NautobotPrefix(Prefix):
 
     def update(self, attrs):
         """Update Prefix object in Nautobot."""
-        _prefix = OrmPrefix.objects.get(prefix=self.prefix)
-        if self.diffsync.job.debug:
-            self.diffsync.job.logger.info(f"Updating Prefix: {_prefix.prefix}")
+        try:
+            if self.diffsync.job.debug:
+                self.diffsync.job.logger.info(f"Attempting to update prefix: {_prefix.prefix}")
+            _prefix = OrmPrefix.objects.get(prefix=self.prefix)
+        except Exception as e:
+            if self.diffsync.job.debug:
+                self.diffsync.job.logger.info(f"Error when updating prefix: {_prefix.prefix}, {e}")
+            return None
         return super().update(attrs)
 
     def delete(self):

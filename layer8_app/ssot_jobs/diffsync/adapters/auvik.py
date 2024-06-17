@@ -293,17 +293,22 @@ class AuvikAdapter(DiffSync):
                 role = "Access Switch"
             elif "UPS" in _device.attributes.device_name or "PP" in _device.attributes.device_name:
                 role = "UPS"
-
-            device = self.device(
-                name=_device.attributes.device_name,
-                device_type=_dt.__str__(),
-                manufacturer=_dmanufacturer.__str__(),
-                location__name=self.building_name.name,
-                serial=_device.attributes.serial_number,
-                monitoring_profile=monitoring_profile,
-                role=role,
-            )
-            self.add(device)
+            try:
+                device = self.device(
+                    name=_device.attributes.device_name,
+                    device_type=_dt.__str__(),
+                    manufacturer=_dmanufacturer.__str__(),
+                    location__name=self.building_name.name,
+                    serial=_device.attributes.serial_number,
+                    monitoring_profile=monitoring_profile,
+                    role=role,
+                )
+                self.add(device)
+            except ObjectAlreadyExists as err:
+                self.job.logger.error(
+                    f"Device already imported from Auvik - this is a duplicate: {device.name} ({device.serial})"
+                )
+                continue
 
             # # Pull interface list from Auvik API to populate device connections dictionary
             # # This will be used to create device interconnections later
