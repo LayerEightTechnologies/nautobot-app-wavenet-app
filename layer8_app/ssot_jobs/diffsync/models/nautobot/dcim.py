@@ -294,7 +294,7 @@ class NautobotPrefix(Prefix):
         try:
             if self.diffsync.job.debug:
                 self.diffsync.job.logger.info(f"Attempting to update prefix: {_prefix.prefix}")
-            _prefix = OrmPrefix.objects.get(prefix=self.prefix)
+            _prefix = OrmPrefix.objects.get(prefix=self.prefix, namespace=self.namespace)
         except Exception as e:
             if self.diffsync.job.debug:
                 self.diffsync.job.logger.info(f"Error when updating prefix: {_prefix.prefix}, {e}")
