@@ -282,15 +282,28 @@ class AuvikAdapter(DiffSync):
 
             role = "Unknown"
 
-            if "CorS" in _device.attributes.device_name:
+            if "CorS".lower() in _device.attributes.device_name.lower():
                 role = "Core Switch"
-            elif "Dist" in _device.attributes.device_name:
+            elif "Dist".lower() in _device.attributes.device_name.lower():
                 role = "Distribution Switch"
-            elif "CorR" in _device.attributes.device_name:
-                role = "Core Router"
-            elif "AccS" in _device.attributes.device_name:
+            elif "-AP".lower() in _device.attributes.device_name.lower():
+                role = "Wireless Access Point"
+            elif (
+                "CorR".lower() in _device.attributes.device_name.lower()
+                or "CorF".lower() in _device.attributes.device_name.lower()
+            ):
+                role = "Core Gateway"
+            elif (
+                "AccS".lower() in _device.attributes.device_name.lower()
+                or "VSS".lower() in _device.attributes.device_name.lower()
+            ):
                 role = "Access Switch"
-            elif "UPS" in _device.attributes.device_name or "PP" in _device.attributes.device_name:
+            elif (
+                "UPS".lower() in _device.attributes.device_name.lower()
+                or "-PP".lower() in _device.attributes.device_name.lower()
+                or "APTS".lower() in _device.attributes.device_name.lower()
+                or "CorPP".lower() in _device.attributes.device_name.lower()
+            ):
                 role = "UPS"
             try:
                 device = self.device(

@@ -115,6 +115,7 @@ class Device(DiffSyncModel):
     device_type: str
     manufacturer: str
     serial: Optional[str]
+    platform: Optional[str]
     monitoring_profile: Optional[dict]
     location__name: str
     role: str
