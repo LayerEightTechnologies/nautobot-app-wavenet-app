@@ -16,7 +16,10 @@ from .helpers.auvik_api import (
 from .ssot_jobs.jobs import AuvikDataSource, Layer8DataSource
 
 from .models import AuvikTenant, AuvikDeviceVendors, AuvikDeviceModels
-from nautobot.dcim.models import Location, Device
+from nautobot.dcim.models import Location, Device, Cable, Interface
+from nautobot.ipam.models import IPAddressToInterface
+from nautobot.extras.models import Status
+from django.db.models import Q
 
 name = "Wavenet App Jobs"
 
@@ -197,7 +200,16 @@ class DecomissionDevice(JobButtonReceiver):
     class Meta:
         """Metadata for the job."""
 
-        name = "Decomission Device"
+        name = "Decommission Device"
+        descrpition = """
+        This job marks a device as decommissioned by doing the following actions:
+            -- Rename to `[decommed] <device_hostname>`
+            -- Set status to `decommissioning`
+            -- Update monitoring profile on device to `null`
+            -- Remove primary IPV4 address from device
+            -- Remove IP addresses from all interfaces
+            -- Remove all cables terminating on device
+        """
 
     def receive_job_button(self, obj):
         """Run the job."""
@@ -206,6 +218,49 @@ class DecomissionDevice(JobButtonReceiver):
         if not user.has_perm("dcim.change_device"):
             self.logger.error(f"User {user} does not have permission to change devices.")
             return
+
+        try:
+            # Rename to [Decommed]...
+
+            obj.name = f"[Decommed] {obj.name}"
+
+            # Set status to decommissioning
+
+            obj.status = Status.objects.get(name="Decommissioning")
+
+            # Remove monitoring profile
+
+            obj.custom_field_data.update({"monitoring_profile": {"monitored_by": None, "monitoring_fields": {}}})
+
+            # Deallocate IP from device
+            obj.primary_ip4 = None
+
+            obj.validated_save()
+
+            # Remove IPs from interfaces
+
+            interfaces = Interface.objects.filter(device=obj.id)
+            for interface in interfaces:
+                interface_ips = IPAddressToInterface.objects.filter(interface=interface)
+                for ip in interface_ips:
+                    ip.delete()
+
+        except Exception as e:
+            print(f"Error while decomissioning {obj.name}: {str(e)}")
+            return
+
+        # Remove all connected cables
+
+        try:
+            connected_cables = Cable.objects.filter(
+                Q(_termination_a_device_id=obj.id) | Q(_termination_b_device_id=obj.id)
+            )
+            for cable in connected_cables:
+                cable.delete()
+        except Exception as e:
+            print(f"Error while removing connected cables for {obj.name}: {str(e)}")
+            return
+
         return
 
 
