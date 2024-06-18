@@ -191,6 +191,24 @@ class SetPrimaryWanInterface(JobButtonReceiver):
         )
 
 
+class DecomissionDevice(JobButtonReceiver):
+    """Class to provide a job that decomissions a device in a Connected building."""
+
+    class Meta:
+        """Metadata for the job."""
+
+        name = "Decomission Device"
+
+    def receive_job_button(self, obj):
+        """Run the job."""
+        user = self.user
+        self.logger.info(f"Decomissioning this device: ```{obj.__dict__}```")
+        if not user.has_perm("dcim.change_device"):
+            self.logger.error(f"User {user} does not have permission to change devices.")
+            return
+        return
+
+
 jobs = [
     LoadAuvikTenants,
     # LoadBuildings,
@@ -199,5 +217,6 @@ jobs = [
     AuvikDataSource,
     LoadAuvikVendorsAndModels,
     SetPrimaryWanInterface,
+    DecomissionDevice,
 ]
 register_jobs(*jobs)
