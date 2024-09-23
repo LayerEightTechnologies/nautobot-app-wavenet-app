@@ -58,6 +58,7 @@ class AuvikAdapter(DiffSync):
         self.interface_data = {}
 
         try:
+            self.logger.info("Retrieving devices from Auvik...")
             device_api_instance = auvik_api_device(self.auvik)
             auvik_tenant_id = self.auvik_tenant_id
             params = {
@@ -75,6 +76,7 @@ class AuvikAdapter(DiffSync):
 
         # self.interface_data must be populated for each device in self.device_data
         try:
+            self.logger.info("Retrieving interfaces from Auvik...")
             interface_api_instance = auvik_api_interface(self.auvik)
             auvik_tenant_id = self.auvik_tenant_id
             for device in self.device_data:
@@ -106,6 +108,7 @@ class AuvikAdapter(DiffSync):
     def load_namespaces(self):
         """Load namespace for building from Auvik."""
         self.job.logger.info(f"auvik_tenant_id: {self.job.building_to_sync}")
+        self.job.logger.info(f"Loading namespaces from Auvik...")
 
         namespace = self.namespace(
             name=f"{self.building_name}",
@@ -120,6 +123,7 @@ class AuvikAdapter(DiffSync):
 
     def load_vlangroups(self):
         """Load VLAN Group for building from Auvik."""
+        self.job.logger.info(f"Loading VLAN Groups from Auvik...")
         vlangroup_name = f"{self.building_name} VLANs"
         vlangroup = self.vlangroup(
             name=vlangroup_name,
@@ -134,6 +138,7 @@ class AuvikAdapter(DiffSync):
 
     def load_vlans(self):
         """Load VLANs for building from Auvik API."""
+        self.job.logger.info(f"Loading VLANs from Auvik...")
         api_instance = auvik_api_network(self.auvik)
         auvik_tenant_id = self.auvik_tenant_id
         params = {
@@ -177,6 +182,7 @@ class AuvikAdapter(DiffSync):
 
     def load_prefixes(self):
         """Load prefixes for building from Auvik API."""
+        self.job.logger.info(f"Loading prefixes from Auvik...")
         api_instance = auvik_api_network(self.auvik)
         auvik_tenant_id = self.auvik_tenant_id
         params = {
@@ -210,6 +216,7 @@ class AuvikAdapter(DiffSync):
 
     def load_devices(self):
         """Load devices for building from Auvik API."""
+        self.job.logger.info(f"Loading devices from Auvik...")
         auvik_devices = self.device_data
 
         # Create a dictionary of device names to device IDs for use in creating device interconnections
@@ -378,6 +385,7 @@ class AuvikAdapter(DiffSync):
 
     def load_interfaces(self):
         """Load interfaces for building from Auvik API."""
+        self.job.logger.info(f"Loading interfaces from Auvik...")
         for device_id, interfaces in self.interface_data.items():
             for interface in interfaces:
                 interface_name = interface.attributes.interface_name
@@ -434,6 +442,7 @@ class AuvikAdapter(DiffSync):
 
     def load_cables(self):
         """Load cables for building from Auvik API."""
+        self.job.logger.info(f"Loading cables from Auvik...")
         interface_connections = self.get_interface_connections()
         for _connection in interface_connections:
             try:
