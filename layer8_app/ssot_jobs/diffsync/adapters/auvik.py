@@ -58,7 +58,7 @@ class AuvikAdapter(DiffSync):
         self.interface_data = {}
 
         try:
-            self.logger.info("Retrieving devices from Auvik...")
+            self.job.logger.info("Retrieving devices from Auvik...")
             device_api_instance = auvik_api_device(self.auvik)
             auvik_tenant_id = self.auvik_tenant_id
             params = {
@@ -76,7 +76,7 @@ class AuvikAdapter(DiffSync):
 
         # self.interface_data must be populated for each device in self.device_data
         try:
-            self.logger.info("Retrieving interfaces from Auvik...")
+            self.job.logger.info("Retrieving interfaces from Auvik...")
             interface_api_instance = auvik_api_interface(self.auvik)
             auvik_tenant_id = self.auvik_tenant_id
             for device in self.device_data:
