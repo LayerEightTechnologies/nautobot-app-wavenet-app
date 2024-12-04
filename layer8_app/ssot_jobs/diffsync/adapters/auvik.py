@@ -36,14 +36,9 @@ class AuvikAdapter(DiffSync):
         self.building_id = building_id
         self.auvik = auvik_api()
         try:
-            # self.building_name = Location.objects.get(
-            #     id=AuvikTenantBuildingRelationship.objects.get(auvik_tenant=self.job.building_to_sync).building.id
-            # )
-            # Update this to look up using the AuvikTenantBuildingRelationship ID
             self.building_name = Location.objects.get(
                 id=AuvikTenantBuildingRelationship.objects.get(id=self.job.building_to_sync.id).building.id
             )
-            # Also define here self.auvik_tenant_id, again looking it up using AuvikTenantBuildingRelationship ID
             self.auvik_tenant_id = AuvikTenant.objects.get(
                 id=AuvikTenantBuildingRelationship.objects.get(id=self.job.building_to_sync.id).auvik_tenant_id
             ).auvik_tenant_id
@@ -70,11 +65,9 @@ class AuvikAdapter(DiffSync):
 
             for device in devices:
                 self.device_map[device.id] = device
-            # self.device_data = fetch_all_pages(device_api_instance, "read_multiple_device_info", **params)
         except Exception as err:
             self.job.logger.error(f"Error fetching devices from Auvik: {err}")
 
-        # self.interface_data must be populated for each device in self.device_data
         try:
             self.job.logger.info("Retrieving interfaces from Auvik...")
             interface_api_instance = auvik_api_interface(self.auvik)
@@ -401,7 +394,7 @@ class AuvikAdapter(DiffSync):
                 device_name = self.device_map[device_id].attributes.device_name
                 device = self.get(
                     self.device, f"{device_name}__{self.building_name.name}"
-                )  # uid for the device is the device name and building name
+                ) 
 
                 monitoring_profile = {
                     "monitoredBy": "auvik",
