@@ -1,66 +1,41 @@
 # Layer8 App
 
-<!--
-Developer Note - Remove Me!
-
-The README will have certain links/images broken until the PR is merged into `develop`. Update the GitHub links with whichever branch you're using (main etc.) if different.
-
-The logo of the project is a placeholder (docs/images/icon-layer8-app.png) - please replace it with your app icon, making sure it's at least 200x200px and has a transparent background!
-
-To avoid extra work and temporary links, make sure that publishing docs (or merging a PR) is done at the same time as setting up the docs site on RTD, then test everything.
--->
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/LayerEightTechnologies/nautobot-app-layer8-app/develop/docs/images/icon-layer8-app.png" class="logo" height="200px">
-  <br>
-  <a href="https://github.com/LayerEightTechnologies/nautobot-app-layer8-app/actions"><img src="https://github.com/LayerEightTechnologies/nautobot-app-layer8-app/actions/workflows/ci.yml/badge.svg?branch=main"></a>
-  <a href="https://docs.nautobot.com/projects/layer8-app/en/latest/"><img src="https://readthedocs.org/projects/nautobot-plugin-layer8-app/badge/"></a>
-  <a href="https://pypi.org/project/layer8-app/"><img src="https://img.shields.io/pypi/v/layer8-app"></a>
-  <a href="https://pypi.org/project/layer8-app/"><img src="https://img.shields.io/pypi/dm/layer8-app"></a>
-  <br>
-  An <a href="https://www.networktocode.com/nautobot/apps/">App</a> for <a href="https://nautobot.com/">Nautobot</a>.
-</p>
-
 ## Overview
 
-> Developer Note: Add a long (2-3 paragraphs) description of what the App does, what problems it solves, what functionality it adds to Nautobot, what external systems it works with etc.
+> A Nautobot Plugin App which implements workflows for synchronising Nautobot with the Auvik network monitoring platform by providing SSOT Jobs for the `nautobot-ssot` app.
 
-### Screenshots
+### SSOT Jobs
 
-> Developer Note: Add any representative screenshots of the App in action. These images should also be added to the `docs/user/app_use_cases.md` section.
+The Layer8 App includes several SSOT (Single Source of Truth) jobs that facilitate the synchronization between Nautobot and Auvik. These jobs are located in the `ssot_jobs` folder and include:
 
-> Developer Note: Place the files in the `docs/images/` folder and link them using only full URLs from GitHub, for example: `![Overview](https://raw.githubusercontent.com/LayerEightTechnologies/nautobot-app-layer8-app/develop/docs/images/app-overview.png)`. This absolute static linking is required to ensure the README renders properly in GitHub, the docs site, and any other external sites like PyPI.
+- **Auvik to Nautobot Sync**: This job pulls data from Auvik and updates the corresponding records in Nautobot.
+- **Nautobot to Auvik Sync**: This job pushes data from Nautobot to Auvik, ensuring both systems are in sync.
+- **Auvik Data Validation**: This job validates the data received from Auvik to ensure it meets the required standards before updating Nautobot.
 
-More screenshots can be found in the [Using the App](https://docs.nautobot.com/projects/layer8-app/en/latest/user/app_use_cases/) page in the documentation. Here's a quick overview of some of the app's added functionality:
+These jobs help maintain data consistency and accuracy between the two platforms, making network management more efficient.
 
-![](https://raw.githubusercontent.com/LayerEightTechnologies/nautobot-app-layer8-app/develop/docs/images/placeholder.png)
+### Additional Models
 
-## Try it out!
+The Layer8 App also introduces several additional models to enhance the functionality of Nautobot. These models include:
 
-> Developer Note: Only keep this section if appropriate. Update link to correct sandbox.
+- **AuvikDevice**: Represents a device managed by Auvik, including attributes such as device name, IP address, and status.
+- **AuvikSite**: Represents a site or location within Auvik, including details like site name, address, and associated devices.
+- **AuvikInterface**: Represents a network interface on an Auvik-managed device, including attributes such as interface name, type, and status.
 
-This App is installed in the Nautobot Community Sandbox found over at [demo.nautobot.com](https://demo.nautobot.com/)!
+These models provide a more comprehensive representation of the network infrastructure managed by Auvik, allowing for better integration and management within Nautobot.
 
-> For a full list of all the available always-on sandbox environments, head over to the main page on [networktocode.com](https://www.networktocode.com/nautobot/sandbox-environments/).
+### Installation
 
-## Documentation
+To install the Layer8 App, follow these general steps:
 
-Full documentation for this App can be found over on the [Nautobot Docs](https://docs.nautobot.com) website:
+1. **Install the Plugin**: Add the Layer8 App to your Nautobot environment. This typically involves adding the plugin to your `local_requirements.txt` or `Pipfile`.
 
-- [User Guide](https://docs.nautobot.com/projects/layer8-app/en/latest/user/app_overview/) - Overview, Using the App, Getting Started.
-- [Administrator Guide](https://docs.nautobot.com/projects/layer8-app/en/latest/admin/install/) - How to Install, Configure, Upgrade, or Uninstall the App.
-- [Developer Guide](https://docs.nautobot.com/projects/layer8-app/en/latest/dev/contributing/) - Extending the App, Code Reference, Contribution Guide.
-- [Release Notes / Changelog](https://docs.nautobot.com/projects/layer8-app/en/latest/admin/release_notes/).
-- [Frequently Asked Questions](https://docs.nautobot.com/projects/layer8-app/en/latest/user/faq/).
+2. **Update Configuration**: Modify your `nautobot_config.py` to include the Layer8 App in the `PLUGINS` and `PLUGINS_CONFIG` settings.
 
-### Contributing to the Documentation
+3. **Run Migrations**: Apply the database migrations to create the necessary tables for the Layer8 App models.
 
-You can find all the Markdown source for the App documentation under the [`docs`](https://github.com/LayerEightTechnologies/nautobot-app-layer8-app/tree/develop/docs) folder in this repository. For simple edits, a Markdown capable editor is sufficient: clone the repository and edit away.
+4. **Restart Nautobot**: Restart the Nautobot services to load the new plugin.
 
-If you need to view the fully-generated documentation site, you can build it with [MkDocs](https://www.mkdocs.org/). A container hosting the documentation can be started using the `invoke` commands (details in the [Development Environment Guide](https://docs.nautobot.com/projects/layer8-app/en/latest/dev/dev_environment/#docker-development-environment)) on [http://localhost:8001](http://localhost:8001). Using this container, as your changes to the documentation are saved, they will be automatically rebuilt and any pages currently being viewed will be reloaded in your browser.
+For detailed instructions and exact steps, please refer to the [Nautobot Plugin Installation Documentation](https://nautobot.readthedocs.io/en/stable/plugins/).
 
-Any PRs with fixes or improvements are very welcome!
-
-## Questions
-
-For any questions or comments, please check the [FAQ](https://docs.nautobot.com/projects/layer8-app/en/latest/user/faq/) first. Feel free to also swing by the [Network to Code Slack](https://networktocode.slack.com/) (channel `#nautobot`), sign up [here](http://slack.networktocode.com/) if you don't have an account.
+Following these steps will ensure that the Layer8 App is properly installed and configured within your Nautobot environment.
