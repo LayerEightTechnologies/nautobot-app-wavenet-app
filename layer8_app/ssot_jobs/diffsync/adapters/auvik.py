@@ -230,7 +230,7 @@ class AuvikAdapter(DiffSync):
             if _device.attributes.make_model is None or _device.attributes.vendor_name is None:
                 if self.job.debug:
                     self.job.logger.warning(
-                        f"Device {_device.attributes.device_name} does not have a vendor or model. Skipping."
+                        f"Device {_device.attributes.device_name} does not have a vendor or model in Auvik. Skipping. Device attributes received from Auvik: f{_device.attributes}"
                     )
                 continue
 
