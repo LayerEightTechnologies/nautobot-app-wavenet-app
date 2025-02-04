@@ -51,6 +51,7 @@ class AuvikAdapter(DiffSync):
         self.device_data = {}
         self.device_map = {}
         self.interface_data = {}
+        self.skipped_devices = []
 
         try:
             self.job.logger.info("Retrieving devices from Auvik...")
@@ -232,6 +233,7 @@ class AuvikAdapter(DiffSync):
                     self.job.logger.warning(
                         f"Device {_device.attributes.device_name} does not have a vendor or model in Auvik. Skipping. Device attributes received from Auvik: f{_device.attributes}"
                     )
+                self.skipped_devices.append(_device.id)
                 continue
 
             try:
@@ -245,12 +247,14 @@ class AuvikAdapter(DiffSync):
                     self.job.logger.warning(
                         f"Device Type for {_device.attributes.make_model} does not exist in Nautobot. Skipping device {_device.attributes.device_name}."
                     )
+                    self.skipped_devices.append(_device.id)
                 continue
             except AuvikDeviceModels.DoesNotExist:
                 if self.job.debug:
                     self.job.logger.warning(
                         f"Mapping for Auvik model {_device.attributes.make_model} does not exist in Nautobot. Skipping device {_device.attributes.device_name}."
                     )
+                    self.skipped_devices.append(_device.id)
                 continue
             try:
                 _dmanufacturer = Manufacturer.objects.get(
@@ -263,12 +267,14 @@ class AuvikAdapter(DiffSync):
                     self.job.logger.warning(
                         f"Manufacturer for {_device.attributes.vendor_name} does not exist in Nautobot. Skipping device {_device.attributes.device_name}."
                     )
+                    self.skipped_devices.append(_device.id)
                 continue
             except AuvikDeviceVendors.DoesNotExist:
                 if self.job.debug:
                     self.job.logger.warning(
                         f"Mapping for Auvik vendor {_device.attributes.vendor_name} does not exist in Nautobot. Skipping device {_device.attributes.device_name}."
                     )
+                    self.skipped_devices.append(_device.id)
                 continue
 
             monitoring_profile = {
@@ -380,6 +386,9 @@ class AuvikAdapter(DiffSync):
         """Load interfaces for building from Auvik API."""
         self.job.logger.info("Loading interfaces from Auvik...")
         for device_id, interfaces in self.interface_data.items():
+            # Skip loading interfaces for devices that were skipped during device loading
+            if device_id in self.skipped_devices:
+                continue
             for interface in interfaces:
                 interface_name = interface.attributes.interface_name
                 if interface_name == "me0":
@@ -473,6 +482,9 @@ class AuvikAdapter(DiffSync):
 
         # Populate data from API
         for device in devices:
+            # Skip devices that were skipped during device loading
+            if device.id in self.skipped_devices:
+                continue
             device_id = device.id
             device_name = device.attributes.device_name
             device_interfaces[device_id] = []
@@ -497,6 +509,10 @@ class AuvikAdapter(DiffSync):
         for device in devices:
             device_id = device.id
             device_name = device.attributes.device_name
+            
+            # Skip devices that were skipped during device loading
+            if device_id in self.skipped_devices:
+                continue
 
             for interface in device_interfaces[device_id]:
                 connected_to = []
