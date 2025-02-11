@@ -16,6 +16,17 @@ menu_items = (
                     ),
                 ),
             ),
+            NavMenuGroup(
+                weight=100,
+                name="Patch Panels",
+                items=(
+                    NavMenuItem(
+                        link="plugins:layer8_app:patch_panel_create",
+                        name="In-Unit Patch Panels",
+                        permissions=["dcim.add_device"],
+                    ),
+                ),
+            ),
         ),
     ),
 )

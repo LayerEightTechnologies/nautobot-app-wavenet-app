@@ -1,7 +1,7 @@
 from django import forms
 from nautobot.apps.forms import BootstrapMixin
 from nautobot.apps.forms import APISelect, DynamicModelChoiceField, DynamicModelMultipleChoiceField
-from nautobot.dcim.models import Device, Interface, Location
+from nautobot.dcim.models import Device, Interface, Location, DeviceType, LocationType
 
 class CableCreationForm(BootstrapMixin, forms.Form):
    
@@ -9,6 +9,7 @@ class CableCreationForm(BootstrapMixin, forms.Form):
         queryset=Device.objects.all(),
         label="1. On this device: ",
         required=True,
+        query_params={"role__n": "Patch Panel"}
     )
     
     device_interface = DynamicModelMultipleChoiceField(
@@ -34,25 +35,34 @@ class CableCreationForm(BootstrapMixin, forms.Form):
         if patch_panel_id:
             self.fields["patch_panel"].queryset = Device.objects.exclude(id=patch_panel_id)
             
-# class PatchPanelCreationForm(BootstrapMixin, forms.Form):
+class PatchPanelCreationForm(BootstrapMixin, forms.Form):
     
-#     building = DynamicModelChoiceField(
-#         queryset=Location.objects.all(),
-#         label="1. At this building:",
-#         required=True,
-#         query={"location_type": "building"},
-#     )
+    building = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        label="1. In all rooms this building:",
+        required=True,
+        depth=0,
+        query_params={"location_type": LocationType.objects.get(name="Building").pk},
+    )
     
-#     rooms = DynamicModelMultipleChoiceField(
-#         queryset=Location.objects.all(),
-#         label="2. In these rooms:",
-#         required=True,
-#         query_params={"parent_id": "$building", "location_type": "room"},
-#     )
     
-#     patch_panel_type = DynamicModelChoiceField(
-#         queryset=DeviceType.objects.all(),
-#         label="3. Patch Panel Type:",
-#         required=True,
-#         query_params={"role": "Patch Panel"},
-#     )
+    patch_panel_type = DynamicModelChoiceField(
+        queryset=DeviceType.objects.all(),
+        label="2. Create Patch Panel of Type:",
+        required=True,
+        query_params={"model__ic": "patch"},
+    )
+    
+    
+    if_exists = forms.BooleanField(
+        label="Only create patch panel if the room does not already have one?",
+        required=False,
+    )
+    
+    def __init__(self, *args, **kwargs):
+        building = kwargs.pop("building", None)
+        patch_panel_type = kwargs.pop("patch_panel_type", None)
+        if_exists = kwargs.pop("if_exists", True)
+        super().__init__(*args, **kwargs)
+        self.fields["if_exists"].initial = if_exists
+        

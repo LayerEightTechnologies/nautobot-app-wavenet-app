@@ -2,9 +2,9 @@ from django.contrib import messages
 from django.urls import reverse_lazy
 from django.utils.safestring import mark_safe
 from django.views.generic.edit import FormView
-from nautobot.dcim.models import Cable, Interface
-from nautobot.extras.models import Status
-from .forms import CableCreationForm
+from nautobot.dcim.models import Cable, Interface, Location, Device
+from nautobot.extras.models import Status, Role
+from .forms import CableCreationForm, PatchPanelCreationForm
 
 class CableCreateView(FormView):
     template_name = "layer8_app/cable_create.html"
@@ -66,3 +66,66 @@ class CableCreateView(FormView):
 
         return super().form_valid(form)
     
+class PatchPanelCreateView(FormView):
+    template_name="layer8_app/patch_panel_create.html"
+    form_class = PatchPanelCreationForm
+    success_url = reverse_lazy("plugins:layer8_app:patch_panel_create")
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        building = self.request.GET.get("building")
+        patch_panel_type_id = self.request.GET.get("patch_panel_type")
+        if_exists = self.request.GET.get("if_exists")
+        
+        if building:
+            kwargs["building"] = building
+            
+        if patch_panel_type_id:
+            kwargs["patch_panel_type"] = patch_panel_type_id
+            
+        if if_exists:
+            kwargs["if_exists"] = if_exists
+            
+        return kwargs
+    
+    def form_valid(self, form):
+        building = form.cleaned_data["building"]
+        patch_panel_type = form.cleaned_data["patch_panel_type"]
+        if_exists = form.cleaned_data["if_exists"]
+        
+        active_status = Status.objects.get(name="Active")
+        patch_panel_role = Role.objects.get(name="Patch Panel")
+        
+        rooms = Location.objects.filter(parent=building, location_type__name="Room")
+        
+        created_count = 0
+        skipped_count = 0
+        
+        for room in rooms:
+            existing_patch_panel = Device.objects.filter(
+                location=room,
+                device_type=patch_panel_type,
+            )
+            
+            if existing_patch_panel.exists() and if_exists:
+                skipped_count += 1
+                continue
+            
+            Device.objects.create(
+                name=f"{room.name}-Patch-Panel",
+                location=room,
+                device_type=patch_panel_type,
+                role=patch_panel_role,
+                status=active_status,
+            )
+            created_count += 1
+        
+        message = mark_safe(
+            f"Patch panels created for {created_count} rooms; {skipped_count} rooms were skipped. <a href='/dcim/devices/?location={building.name}&role=Patch%20Panel'>View Building Patch Panels</a>."
+        )
+        messages.success(
+            self.request,
+            message
+        )
+        
+        return super().form_valid(form)

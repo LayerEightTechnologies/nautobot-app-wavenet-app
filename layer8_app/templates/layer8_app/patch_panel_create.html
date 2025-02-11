@@ -1,0 +1,48 @@
+{% extends "base.html" %} {% load form_helpers %} {% block content %}
+<h1>In-Unit Patch Panels</h1>
+<div class="container mt-4">
+  <div class="card">
+    <div class="card-body">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <strong>Bulk-Create In-Unit Patch Panels</strong>
+        </div>
+        <div class="panel-body">
+          <form method="post">
+            {% csrf_token %}
+            <div class="row">
+              <div class="col-md-12">
+                        <div class="alert alert-info m-5" role="alert">
+                            Using this form will bulk-create patch panels in all units for a given building.
+                        </div>
+                        {% render_field form.building %} 
+                        <div class="clearfix m-2"></div>
+
+
+                        {% render_field form.patch_panel_type %}
+                        <div class="clearfix m-2"></div>
+
+
+
+              </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-12">
+                    {% render_field form.if_exists %}
+                    <div class="clearfix m-2"></div>
+                </div>
+            </div>
+
+            <div class="row mt-2">
+                <div class="col-md-12">
+                    <button type="submit" class="btn btn-primary">Create Patch Panels</button>
+                    <div class="clearfix m-2"></div>
+                </div>
+
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
