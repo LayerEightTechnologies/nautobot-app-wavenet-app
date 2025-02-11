@@ -5,6 +5,8 @@ from importlib import metadata
 
 from nautobot.apps import NautobotAppConfig
 
+from . import navigation
+
 __version__ = metadata.version(__name__)
 
 
@@ -23,6 +25,7 @@ class Layer8AppConfig(NautobotAppConfig):
     default_settings = {}
     caching_config = {}
     jobs = "jobs.jobs"
-
+    
+    nav_menu_items = navigation.menu_items
 
 config = Layer8AppConfig  # pylint:disable=invalid-name

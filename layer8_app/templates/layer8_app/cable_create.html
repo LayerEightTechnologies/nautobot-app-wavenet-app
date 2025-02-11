@@ -1,0 +1,48 @@
+{% extends "base.html" %} {% load form_helpers %} {% block content %}
+<h1>Floodwired Connections</h1>
+<div class="container mt-4">
+  <div class="card">
+    <div class="card-body">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <strong>Bulk-Create Floodwired Connections</strong>
+        </div>
+        <div class="panel-body">
+          <form method="post">
+            {% csrf_token %}
+            <div class="row">
+              <div class="col-md-12">
+                        <div class="alert alert-info m-5" role="alert">
+                            Using this form will bulk-create cable connections between the selected device interfaces and the selected patch panel.
+                        </div>
+                        {% render_field form.device %} 
+                        <div class="clearfix m-2"></div>
+
+
+                        {% render_field form.device_interface %}
+                        <div class="clearfix m-2"></div>
+
+
+
+              </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-12">
+                    {% render_field form.patch_panel %}
+                    <div class="clearfix m-2"></div>
+                </div>
+            </div>
+
+            <div class="row mt-2">
+                <div class="col-md-12">
+                    <button type="submit" class="btn btn-primary">Create Floodwiring</button>
+                    <div class="clearfix m-2"></div>
+                </div>
+
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
