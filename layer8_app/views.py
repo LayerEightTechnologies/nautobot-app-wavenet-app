@@ -104,7 +104,7 @@ class PatchPanelCreateView(FormView):
         for room in rooms:
             existing_patch_panel = Device.objects.filter(
                 location=room,
-                device_type=patch_panel_type,
+                role=patch_panel_role,
             )
             
             if existing_patch_panel.exists() and if_exists:
