@@ -160,6 +160,7 @@ class SetPrimaryWanInterface(JobButtonReceiver):
             return
         try:
             location = Location.objects.get(name=obj.device.location.name)
+            interface = Interface.objects.get(id=obj.id)
             device = Device.objects.get(id=obj.device.id)
             device_auvik_id = device.custom_field_data.get("monitoring_profile")["monitoringFields"]["deviceId"]
             self.logger.info(f"Location found. ```{location.__dict__}```")
@@ -176,7 +177,9 @@ class SetPrimaryWanInterface(JobButtonReceiver):
                     }
                 }
             )
+            interface.custom_field_data.update({"site_primary_wan_interface": True})
             location.validated_save()
+            interfaace.validated_save()
         except Location.DoesNotExist:
             self.logger.error(f"Location not found for location: {obj.id}")
             return
