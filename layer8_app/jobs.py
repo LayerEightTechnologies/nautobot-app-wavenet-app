@@ -179,7 +179,7 @@ class SetPrimaryWanInterface(JobButtonReceiver):
             )
             interface.custom_field_data.update({"site_primary_wan_interface": True})
             location.validated_save()
-            interfaace.validated_save()
+            interface.validated_save()
         except Location.DoesNotExist:
             self.logger.error(f"Location not found for location: {obj.id}")
             return

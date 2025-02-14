@@ -14,6 +14,11 @@ menu_items = (
                         name="Floodwired Connections",
                         permissions=["dcim.add_cable"],
                     ),
+                    NavMenuItem(
+                        link="plugins:layer8_app:cable_create_expandable",
+                        name="Floodwired Connections (Expandable)",
+                        permissions=["dcim.add_cable"],
+                    ),
                 ),
             ),
             NavMenuGroup(
