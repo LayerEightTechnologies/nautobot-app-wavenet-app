@@ -450,6 +450,9 @@ class NautobotInterface(Interface):
                 f"Failed to update Interface: {self.name} on {self.device__name} at {self.device__location__name}"
             )
             return None
+        self.diffsync.job.logger.info(
+            f"Running interface ({self.name} on {self.device__name}) update, hopefully with monitoring profile"
+        )
         self.diffsync.job.logger.info("Running interface update, hopefully with monitoring profile")
         if attrs.get("monitoring_profile"):
             self.diffsync.job.logger.info("Updating monitoring profile")
@@ -531,9 +534,9 @@ class NautobotIPAddress(IPAddress):
 
     def update(self, attrs):
         """Update IPAddress object in Nautobot."""
-        _ipaddress = OrmIPAddress.objects.get(address=self.address)
         if self.diffsync.job.debug:
             self.diffsync.job.logger.info(f"Updating IPAddress: {_ipaddress.address}")
+        _ipaddress = OrmIPAddress.objects.get(address=self.address)
         return super().update(attrs)
 
     def delete(self):
