@@ -366,9 +366,7 @@ class NautobotDevice(Device):
                     )
             return super().update(attrs)
         except Exception as e:
-            self.diffsync.job.logger.error(
-                f"Failed to update Device monitoring profile for {_device.name}: {e} - {_device}"
-            )
+            self.diffsync.job.logger.error(f"Failed to update Device monitoring profile for {self.name}: {e}")
 
     def delete(self):
         """Delete Device object in Nautobot."""
